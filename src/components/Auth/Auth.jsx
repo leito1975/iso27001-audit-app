@@ -113,11 +113,6 @@ const Auth = () => {
                         )}
                     </div>
 
-                    {isLogin && (
-                        <div className="auth-demo">
-                            <p>Demo: <strong>admin@example.com</strong> / <strong>admin123</strong></p>
-                        </div>
-                    )}
                 </form>
             </div>
         </div>
