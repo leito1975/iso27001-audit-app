@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 // Load environment variables
@@ -58,13 +60,39 @@ app.use('/api/users', usersRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
+// Auto-create admin user on first run if no users exist
+async function ensureAdminUser() {
+    const prisma = new PrismaClient();
+    try {
+        const userCount = await prisma.user.count();
+        if (userCount === 0) {
+            const hash = await bcrypt.hash('admin123', 10);
+            await prisma.user.create({
+                data: {
+                    email: 'admin@auditia.com',
+                    passwordHash: hash,
+                    name: 'Administrador',
+                    role: 'admin',
+                    status: 'active'
+                }
+            });
+            console.log('✅ Admin user created: admin@auditia.com / admin123');
+        }
+    } catch (e) {
+        console.error('Auto-setup error:', e.message);
+    } finally {
+        await prisma.$disconnect();
+    }
+}
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`
-🚀 ISO 27001 Audit API Server
+🚀 AuditIA API Server
 📍 Running on http://localhost:${PORT}
 🔧 Environment: ${process.env.NODE_ENV || 'development'}
     `);
+    await ensureAdminUser();
 });
 
 export default app;
