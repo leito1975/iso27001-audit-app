@@ -1,9 +1,21 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, Edit2, Trash2, Eye, X, AlertCircle, CheckCircle, Clock, Info, Tag } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Eye, X, AlertCircle, CheckCircle, Clock, Info, Tag, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { useAudit } from '../../context/AuditContext';
 import { FINDING_TYPES } from '../../data/iso27001-controls';
 import TagSelector from '../../components/Tags/TagSelector';
+import api from '../../services/api';
 import './Findings.css';
+
+const NC_DETAIL_EMPTY = {
+    areaRevisada: '', clausula: '', responsable: '',
+    what: '', why: '', when: '', where: '', who: '', how: '',
+    correccionInmediata: '', fechaCorreccion: '',
+    causaRaiz1: '', causaRaiz2: '', causaRaiz3: '', causaRaiz4: '', causaRaiz5: '',
+    accionCorrectiva: '', fechaAccionCorrectiva: '',
+    evidenciasAC: '', indicador: '', valorIndicador: '', metaIndicador: '',
+    fechaEstimada: '', verificador: '', eficaz: false,
+    origenNc: '', fechaInicioNc: '', fechaFinNc: ''
+};
 
 const Findings = () => {
     const { findings, addFinding, updateFinding, deleteFinding, controls, tags } = useAudit();
@@ -26,6 +38,9 @@ const Findings = () => {
         tags: []
     });
     const [controlSearch, setControlSearch] = useState('');
+    const [ncData, setNcData] = useState(NC_DETAIL_EMPTY);
+    const [showNcPanel, setShowNcPanel] = useState(false);
+    const [savingNc, setSavingNc] = useState(false);
 
     const filteredFindings = findings.filter(finding => {
         const matchesSearch =
@@ -68,20 +83,42 @@ const Findings = () => {
             });
         }
         setControlSearch('');
+        setNcData(NC_DETAIL_EMPTY);
+        setShowNcPanel(['nc-major', 'nc-minor'].includes(finding?.type || 'observation'));
+        // Load existing NC detail if editing
+        if (finding?.ncDetail) {
+            setNcData({ ...NC_DETAIL_EMPTY, ...finding.ncDetail });
+        }
         setShowModal(true);
     };
 
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingFinding(null);
+        setNcData(NC_DETAIL_EMPTY);
+        setShowNcPanel(false);
     };
 
-    const handleSubmit = (e) => {
+    const isNcType = (type) => type === 'nc-major' || type === 'nc-minor';
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        let findingId = editingFinding?.id;
         if (editingFinding) {
-            updateFinding(editingFinding.id, formData);
+            await updateFinding(editingFinding.id, formData);
         } else {
-            addFinding(formData);
+            findingId = await addFinding(formData);
+        }
+        // Save NC detail if applicable
+        if (isNcType(formData.type) && findingId) {
+            setSavingNc(true);
+            try {
+                await api.findings.saveNcDetail(findingId, ncData);
+            } catch (err) {
+                console.error('Error saving NC detail:', err);
+            } finally {
+                setSavingNc(false);
+            }
         }
         handleCloseModal();
     };
@@ -471,14 +508,156 @@ const Findings = () => {
                                         onChange={(newTags) => setFormData({ ...formData, tags: newTags })}
                                     />
                                 </div>
+
+                                {/* ── NC EXPANDED PANEL ─────────────────────── */}
+                                {isNcType(formData.type) && (
+                                    <div className="nc-panel">
+                                        <button
+                                            type="button"
+                                            className="nc-panel-toggle"
+                                            onClick={() => setShowNcPanel(v => !v)}
+                                        >
+                                            <FileText size={16} />
+                                            <span>Informe de No Conformidad</span>
+                                            <span className="nc-panel-badge">
+                                                {formData.type === 'nc-major' ? 'NC MAYOR' : 'NC MENOR'}
+                                            </span>
+                                            {showNcPanel ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                        </button>
+
+                                        {showNcPanel && (
+                                            <div className="nc-panel-body">
+                                                {/* HEADER */}
+                                                <div className="nc-section-title">Datos del Informe</div>
+                                                <div className="form-row">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Área Revisada</label>
+                                                        <input className="form-input" value={ncData.areaRevisada} onChange={e => setNcData({...ncData, areaRevisada: e.target.value})} placeholder="ej: Gestión de Identidades" />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Cláusula ISO</label>
+                                                        <input className="form-input" value={ncData.clausula} onChange={e => setNcData({...ncData, clausula: e.target.value})} placeholder="ej: 5.14" />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Responsable del Proceso</label>
+                                                        <input className="form-input" value={ncData.responsable} onChange={e => setNcData({...ncData, responsable: e.target.value})} placeholder="Nombre del responsable" />
+                                                    </div>
+                                                </div>
+
+                                                {/* 5W1H */}
+                                                <div className="nc-section-title">Análisis 5W1H</div>
+                                                {[
+                                                    { key: 'what', label: 'WHAT — ¿Qué se quiere mejorar?' },
+                                                    { key: 'why',  label: 'WHY — ¿Por qué se quiere mejorar?' },
+                                                    { key: 'when', label: 'WHEN — ¿Cuándo se quiere mejorar?' },
+                                                    { key: 'where',label: 'WHERE — ¿Dónde se va a mejorar?' },
+                                                    { key: 'who',  label: 'WHO — ¿Quién lo va a mejorar?' },
+                                                    { key: 'how',  label: 'HOW — ¿Cómo lo va a mejorar?' },
+                                                ].map(({ key, label }) => (
+                                                    <div className="form-group" key={key}>
+                                                        <label className="form-label">{label}</label>
+                                                        <textarea className="form-textarea" rows={2} value={ncData[key]} onChange={e => setNcData({...ncData, [key]: e.target.value})} />
+                                                    </div>
+                                                ))}
+
+                                                {/* CORRECCIÓN INMEDIATA */}
+                                                <div className="nc-section-title">Corrección Inmediata</div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Corrección (arreglo inmediato)</label>
+                                                    <textarea className="form-textarea" rows={3} value={ncData.correccionInmediata} onChange={e => setNcData({...ncData, correccionInmediata: e.target.value})} placeholder="Descripción de las acciones de corrección inmediata..." />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Fecha de Corrección</label>
+                                                    <input type="date" className="form-input" value={ncData.fechaCorreccion?.split('T')[0] || ''} onChange={e => setNcData({...ncData, fechaCorreccion: e.target.value})} />
+                                                </div>
+
+                                                {/* 5 PORQUÉS */}
+                                                <div className="nc-section-title">Análisis de Causa Raíz — 5 Porqués</div>
+                                                {[1, 2, 3, 4, 5].map(n => (
+                                                    <div className="form-group" key={n}>
+                                                        <label className="form-label">{n}° Análisis — ¿Cómo / Por qué pasó?</label>
+                                                        <textarea className="form-textarea" rows={2}
+                                                            value={ncData[`causaRaiz${n}`]}
+                                                            onChange={e => setNcData({...ncData, [`causaRaiz${n}`]: e.target.value})}
+                                                            placeholder={`${n}° nivel de análisis causal...`}
+                                                        />
+                                                    </div>
+                                                ))}
+
+                                                {/* ACCIÓN CORRECTIVA */}
+                                                <div className="nc-section-title">Acción Correctiva</div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Acción Correctiva (para prevenir reocurrencia)</label>
+                                                    <textarea className="form-textarea" rows={3} value={ncData.accionCorrectiva} onChange={e => setNcData({...ncData, accionCorrectiva: e.target.value})} placeholder="Plan de acción correctiva definitivo..." />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Fecha de Acción Correctiva</label>
+                                                    <input type="date" className="form-input" value={ncData.fechaAccionCorrectiva?.split('T')[0] || ''} onChange={e => setNcData({...ncData, fechaAccionCorrectiva: e.target.value})} />
+                                                </div>
+
+                                                {/* EVIDENCIAS Y VERIFICACIÓN */}
+                                                <div className="nc-section-title">Evidencias y Verificación de Eficacia</div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Evidencias documentales</label>
+                                                    <textarea className="form-textarea" rows={2} value={ncData.evidenciasAC} onChange={e => setNcData({...ncData, evidenciasAC: e.target.value})} placeholder="Documentos / registros que evidencian la implementación..." />
+                                                </div>
+                                                <div className="form-row">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Indicador</label>
+                                                        <input className="form-input" value={ncData.indicador} onChange={e => setNcData({...ncData, indicador: e.target.value})} />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Valor</label>
+                                                        <input className="form-input" value={ncData.valorIndicador} onChange={e => setNcData({...ncData, valorIndicador: e.target.value})} />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Meta</label>
+                                                        <input className="form-input" value={ncData.metaIndicador} onChange={e => setNcData({...ncData, metaIndicador: e.target.value})} />
+                                                    </div>
+                                                </div>
+                                                <div className="form-row">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Verificador</label>
+                                                        <input className="form-input" value={ncData.verificador} onChange={e => setNcData({...ncData, verificador: e.target.value})} />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Fecha Estimada</label>
+                                                        <input type="date" className="form-input" value={ncData.fechaEstimada?.split('T')[0] || ''} onChange={e => setNcData({...ncData, fechaEstimada: e.target.value})} />
+                                                    </div>
+                                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 24 }}>
+                                                        <input type="checkbox" id="eficaz" checked={!!ncData.eficaz} onChange={e => setNcData({...ncData, eficaz: e.target.checked})} />
+                                                        <label htmlFor="eficaz" className="form-label" style={{ margin: 0 }}>Eficaz</label>
+                                                    </div>
+                                                </div>
+
+                                                {/* METADATA */}
+                                                <div className="nc-section-title">Información Adicional</div>
+                                                <div className="form-row">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Origen de la NC</label>
+                                                        <input className="form-input" value={ncData.origenNc} onChange={e => setNcData({...ncData, origenNc: e.target.value})} placeholder="ej: Auditoría Interna 2024" />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Fecha Inicio</label>
+                                                        <input type="date" className="form-input" value={ncData.fechaInicioNc?.split('T')[0] || ''} onChange={e => setNcData({...ncData, fechaInicioNc: e.target.value})} />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Fecha Fin</label>
+                                                        <input type="date" className="form-input" value={ncData.fechaFinNc?.split('T')[0] || ''} onChange={e => setNcData({...ncData, fechaFinNc: e.target.value})} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
                                     Cancelar
                                 </button>
-                                <button type="submit" className="btn btn-primary">
-                                    {editingFinding ? 'Guardar Cambios' : 'Crear Hallazgo'}
+                                <button type="submit" className="btn btn-primary" disabled={savingNc}>
+                                    {savingNc ? 'Guardando...' : editingFinding ? 'Guardar Cambios' : 'Crear Hallazgo'}
                                 </button>
                             </div>
                         </form>

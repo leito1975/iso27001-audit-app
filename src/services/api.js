@@ -112,7 +112,12 @@ class ApiService {
             body: JSON.stringify(data)
         }),
         delete: (id) => this.fetch(`/findings/${id}`, { method: 'DELETE' }),
-        getByAudit: (auditId) => this.fetch(`/findings?auditId=${auditId}`)
+        getByAudit: (auditId) => this.fetch(`/findings?auditId=${auditId}`),
+        getNcDetail: (id) => this.fetch(`/findings/${id}/nc-detail`),
+        saveNcDetail: (id, data) => this.fetch(`/findings/${id}/nc-detail`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        })
     };
 
     // ========== RISKS ==========

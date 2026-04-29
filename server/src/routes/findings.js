@@ -42,14 +42,16 @@ router.get('/', asyncHandler(async (req, res) => {
                 include: {
                     tag: { select: { id: true, name: true, color: true } }
                 }
-            }
+            },
+            ncDetail: true
         },
         orderBy: { createdAt: 'desc' }
     });
 
     let result = findings.map(f => ({
         ...mapFinding(f),
-        tags: f.tags.map(ft => ft.tag)
+        tags: f.tags.map(ft => ft.tag),
+        ncDetail: f.ncDetail || null
     }));
 
     // Filter by tag if specified
@@ -201,6 +203,47 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
         }
         throw e;
     }
+}));
+
+// ─── NC Detail endpoints ──────────────────────────────────────────────────────
+
+// GET /findings/:id/nc-detail
+router.get('/:id/nc-detail', authenticateToken, asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const detail = await prisma.findingNcDetail.findUnique({
+        where: { findingId: parseInt(id) }
+    });
+    res.json({ ncDetail: detail || null });
+}));
+
+// PUT /findings/:id/nc-detail  (upsert)
+router.put('/:id/nc-detail', authenticateToken, asyncHandler(async (req, res) => {
+    const findingId = parseInt(req.params.id);
+    const data = req.body;
+
+    // Remove non-schema fields
+    delete data.id;
+    delete data.findingId;
+    delete data.createdAt;
+    delete data.updatedAt;
+
+    // Parse dates
+    const dateFields = ['fechaCorreccion', 'fechaAccionCorrectiva', 'fechaEstimada', 'fechaInicioNc', 'fechaFinNc'];
+    for (const f of dateFields) {
+        if (data[f] && data[f] !== '') {
+            data[f] = new Date(data[f]);
+        } else {
+            data[f] = null;
+        }
+    }
+
+    const detail = await prisma.findingNcDetail.upsert({
+        where: { findingId },
+        create: { findingId, ...data },
+        update: data
+    });
+
+    res.json({ ncDetail: detail });
 }));
 
 export default router;
