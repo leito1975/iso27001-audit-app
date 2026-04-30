@@ -234,6 +234,13 @@ model Risk {
   valorRiesgo          Float?       @map("valor_riesgo")
   impactoNivel         String?      @map("impacto_nivel")
 
+  // CIA residual
+  nivelConfidencialidadResidual String? @map("nivel_confidencialidad_residual")
+  nivelIntegridadResidual      String?  @map("nivel_integridad_residual")
+  nivelDisponibilidadResidual  String?  @map("nivel_disponibilidad_residual")
+  nivelPrivacidadResidual      String?  @map("nivel_privacidad_residual")
+  probabilidadNivelResidual    String?  @map("probabilidad_nivel_residual")
+
   // Control y seguimiento
   estadoControl        String?      @map("estado_control")
   clasificacionResidual String?     @map("clasificacion_residual")

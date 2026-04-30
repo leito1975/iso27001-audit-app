@@ -101,7 +101,10 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
         impactoFinanciero, impactoContinuidad, impactoImagen, impactoLegal,
         nivelConfidencialidad, nivelIntegridad, nivelDisponibilidad, nivelPrivacidad,
         probabilidadNivel, valorRiesgo, impactoNivel,
-        estadoControl, clasificacionResidual, estadoRevision
+        estadoControl, clasificacionResidual, estadoRevision,
+        // CIA residual
+        nivelConfidencialidadResidual, nivelIntegridadResidual,
+        nivelDisponibilidadResidual, nivelPrivacidadResidual, probabilidadNivelResidual
     } = req.body;
 
     if (!name) {
@@ -145,6 +148,11 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
             estadoControl,
             clasificacionResidual,
             estadoRevision,
+            nivelConfidencialidadResidual,
+            nivelIntegridadResidual,
+            nivelDisponibilidadResidual,
+            nivelPrivacidadResidual,
+            probabilidadNivelResidual,
             ...(controlIds.length > 0 && {
                 controls: {
                     create: controlIds.map(controlId => ({ controlId }))
@@ -188,7 +196,10 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
         impactoFinanciero, impactoContinuidad, impactoImagen, impactoLegal,
         nivelConfidencialidad, nivelIntegridad, nivelDisponibilidad, nivelPrivacidad,
         probabilidadNivel, valorRiesgo, impactoNivel,
-        estadoControl, clasificacionResidual, estadoRevision
+        estadoControl, clasificacionResidual, estadoRevision,
+        // CIA residual
+        nivelConfidencialidadResidual, nivelIntegridadResidual,
+        nivelDisponibilidadResidual, nivelPrivacidadResidual, probabilidadNivelResidual
     } = req.body;
 
     const risk = await prisma.risk.update({
@@ -227,7 +238,12 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
             ...(impactoNivel !== undefined && { impactoNivel }),
             ...(estadoControl !== undefined && { estadoControl }),
             ...(clasificacionResidual !== undefined && { clasificacionResidual }),
-            ...(estadoRevision !== undefined && { estadoRevision })
+            ...(estadoRevision !== undefined && { estadoRevision }),
+            ...(nivelConfidencialidadResidual !== undefined && { nivelConfidencialidadResidual }),
+            ...(nivelIntegridadResidual !== undefined && { nivelIntegridadResidual }),
+            ...(nivelDisponibilidadResidual !== undefined && { nivelDisponibilidadResidual }),
+            ...(nivelPrivacidadResidual !== undefined && { nivelPrivacidadResidual }),
+            ...(probabilidadNivelResidual !== undefined && { probabilidadNivelResidual })
         }
     });
 

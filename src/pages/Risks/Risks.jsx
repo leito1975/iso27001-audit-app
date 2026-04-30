@@ -111,8 +111,10 @@ const Risks = () => {
 
     const [calculatedValue, setCalculatedValue] = useState(null);
     const [calculatedLevel, setCalculatedLevel] = useState(null);
+    const [calculatedResidualValue, setCalculatedResidualValue] = useState(null);
+    const [calculatedResidualLevel, setCalculatedResidualLevel] = useState(null);
 
-    // Calcular valor cuando cambien los campos CIA o probabilidad
+    // Calcular valor cuando cambien los campos CIA o probabilidad (riesgo inherente)
     useEffect(() => {
         if (formData.nivelConfidencialidad && formData.nivelIntegridad &&
             formData.nivelDisponibilidad && formData.nivelPrivacidad && formData.probabilidadNivel) {
@@ -137,6 +139,36 @@ const Risks = () => {
         formData.nivelDisponibilidad,
         formData.nivelPrivacidad,
         formData.probabilidadNivel
+    ]);
+
+    // Auto-calcular clasificación residual cuando cambien los campos CIA residual
+    useEffect(() => {
+        if (formData.nivelConfidencialidadResidual && formData.nivelIntegridadResidual &&
+            formData.nivelDisponibilidadResidual && formData.nivelPrivacidadResidual &&
+            formData.probabilidadNivelResidual) {
+            const valor = calculateRiskValue(
+                {
+                    c: formData.nivelConfidencialidadResidual,
+                    i: formData.nivelIntegridadResidual,
+                    d: formData.nivelDisponibilidadResidual,
+                    priv: formData.nivelPrivacidadResidual
+                },
+                formData.probabilidadNivelResidual
+            );
+            const level = getImpactLevel(valor);
+            setCalculatedResidualValue(valor);
+            setCalculatedResidualLevel(level);
+            setFormData(prev => ({ ...prev, clasificacionResidual: level }));
+        } else {
+            setCalculatedResidualValue(null);
+            setCalculatedResidualLevel(null);
+        }
+    }, [
+        formData.nivelConfidencialidadResidual,
+        formData.nivelIntegridadResidual,
+        formData.nivelDisponibilidadResidual,
+        formData.nivelPrivacidadResidual,
+        formData.probabilidadNivelResidual
     ]);
 
     const filteredRisks = risks.filter(risk => {
@@ -243,7 +275,9 @@ const Risks = () => {
             // Convertir title a name para la API
             name: formData.title,
             valorRiesgo: calculatedValue,
-            impactoNivel: calculatedLevel
+            impactoNivel: calculatedLevel,
+            // Clasificación residual siempre viene del auto-cálculo
+            clasificacionResidual: formData.clasificacionResidual
         };
         delete submitData.title;
 
@@ -980,6 +1014,21 @@ const Risks = () => {
                                                 </select>
                                             </div>
 
+                                            {/* Score residual calculado */}
+                                            {calculatedResidualValue !== null && (
+                                                <div className="risk-score-card" style={{ marginTop: '20px', marginBottom: '16px' }}>
+                                                    <div className="score-value" style={{ color: getValueColor(calculatedResidualValue) }}>
+                                                        {calculatedResidualValue.toFixed(2)}
+                                                    </div>
+                                                    <div className="score-label">Valor del Riesgo Residual</div>
+                                                    <div className="score-impact">
+                                                        <span className={`impact-level-badge impact-${calculatedResidualLevel.toLowerCase().replace(/\s/g, '-')}`}>
+                                                            {calculatedResidualLevel}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="form-row">
                                                 <div className="form-group">
                                                     <label className="form-label">Clasificación Residual</label>
@@ -987,8 +1036,9 @@ const Risks = () => {
                                                         type="text"
                                                         className="form-input"
                                                         value={formData.clasificacionResidual}
-                                                        onChange={(e) => setFormData({ ...formData, clasificacionResidual: e.target.value })}
-                                                        placeholder="Clasificación automática o manual"
+                                                        readOnly
+                                                        placeholder="Se calcula automáticamente"
+                                                        style={{ background: 'var(--bg-tertiary)', cursor: 'default' }}
                                                     />
                                                 </div>
 

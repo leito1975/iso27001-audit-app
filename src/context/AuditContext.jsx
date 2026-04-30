@@ -273,7 +273,33 @@ export const AuditProvider = ({ children }) => {
                 residualEvaluatedAt: risk.residualEvaluatedAt || null,
                 auditId: currentAuditId || null,
                 controlIds: risk.controlIds || [],
-                tags: risk.tags || []
+                tags: risk.tags || [],
+                // Campos metodología CIA
+                tipoActivo: risk.tipoActivo || null,
+                origenRiesgo: risk.origenRiesgo || null,
+                amenazas: risk.amenazas || null,
+                actividad: risk.actividad || null,
+                riesgoInherente: risk.riesgoInherente || null,
+                impactoFinanciero: risk.impactoFinanciero || false,
+                impactoContinuidad: risk.impactoContinuidad || false,
+                impactoImagen: risk.impactoImagen || false,
+                impactoLegal: risk.impactoLegal || false,
+                nivelConfidencialidad: risk.nivelConfidencialidad || null,
+                nivelIntegridad: risk.nivelIntegridad || null,
+                nivelDisponibilidad: risk.nivelDisponibilidad || null,
+                nivelPrivacidad: risk.nivelPrivacidad || null,
+                probabilidadNivel: risk.probabilidadNivel || null,
+                valorRiesgo: risk.valorRiesgo || null,
+                impactoNivel: risk.impactoNivel || null,
+                estadoControl: risk.estadoControl || null,
+                clasificacionResidual: risk.clasificacionResidual || null,
+                estadoRevision: risk.estadoRevision || null,
+                // Campos CIA residual
+                nivelConfidencialidadResidual: risk.nivelConfidencialidadResidual || null,
+                nivelIntegridadResidual: risk.nivelIntegridadResidual || null,
+                nivelDisponibilidadResidual: risk.nivelDisponibilidadResidual || null,
+                nivelPrivacidadResidual: risk.nivelPrivacidadResidual || null,
+                probabilidadNivelResidual: risk.probabilidadNivelResidual || null
             });
             setRisks(prev => [data.risk, ...prev]);
             logActivity('risk', `Riesgo creado: ${risk.title || risk.name}`, data.risk.id);
@@ -302,9 +328,35 @@ export const AuditProvider = ({ children }) => {
                 residualNotes: updates.residualNotes !== undefined ? updates.residualNotes : null,
                 residualEvaluatedAt: updates.residualEvaluatedAt || null,
                 controlIds: updates.controlIds,
-                tags: updates.tags
+                tags: updates.tags,
+                // Campos metodología CIA
+                tipoActivo: updates.tipoActivo !== undefined ? updates.tipoActivo : null,
+                origenRiesgo: updates.origenRiesgo !== undefined ? updates.origenRiesgo : null,
+                amenazas: updates.amenazas !== undefined ? updates.amenazas : null,
+                actividad: updates.actividad !== undefined ? updates.actividad : null,
+                riesgoInherente: updates.riesgoInherente !== undefined ? updates.riesgoInherente : null,
+                impactoFinanciero: updates.impactoFinanciero !== undefined ? updates.impactoFinanciero : false,
+                impactoContinuidad: updates.impactoContinuidad !== undefined ? updates.impactoContinuidad : false,
+                impactoImagen: updates.impactoImagen !== undefined ? updates.impactoImagen : false,
+                impactoLegal: updates.impactoLegal !== undefined ? updates.impactoLegal : false,
+                nivelConfidencialidad: updates.nivelConfidencialidad !== undefined ? updates.nivelConfidencialidad : null,
+                nivelIntegridad: updates.nivelIntegridad !== undefined ? updates.nivelIntegridad : null,
+                nivelDisponibilidad: updates.nivelDisponibilidad !== undefined ? updates.nivelDisponibilidad : null,
+                nivelPrivacidad: updates.nivelPrivacidad !== undefined ? updates.nivelPrivacidad : null,
+                probabilidadNivel: updates.probabilidadNivel !== undefined ? updates.probabilidadNivel : null,
+                valorRiesgo: updates.valorRiesgo !== undefined ? updates.valorRiesgo : null,
+                impactoNivel: updates.impactoNivel !== undefined ? updates.impactoNivel : null,
+                estadoControl: updates.estadoControl !== undefined ? updates.estadoControl : null,
+                clasificacionResidual: updates.clasificacionResidual !== undefined ? updates.clasificacionResidual : null,
+                estadoRevision: updates.estadoRevision !== undefined ? updates.estadoRevision : null,
+                // Campos CIA residual
+                nivelConfidencialidadResidual: updates.nivelConfidencialidadResidual !== undefined ? updates.nivelConfidencialidadResidual : null,
+                nivelIntegridadResidual: updates.nivelIntegridadResidual !== undefined ? updates.nivelIntegridadResidual : null,
+                nivelDisponibilidadResidual: updates.nivelDisponibilidadResidual !== undefined ? updates.nivelDisponibilidadResidual : null,
+                nivelPrivacidadResidual: updates.nivelPrivacidadResidual !== undefined ? updates.nivelPrivacidadResidual : null,
+                probabilidadNivelResidual: updates.probabilidadNivelResidual !== undefined ? updates.probabilidadNivelResidual : null
             };
-            const data = await api.risks.update(id, payload);
+            await api.risks.update(id, payload);
             // Re-fetch to get updated controls
             const fresh = await api.risks.getById(id);
             setRisks(prev => prev.map(r => r.id === id ? fresh.risk : r));
