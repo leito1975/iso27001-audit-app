@@ -95,7 +95,13 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
         name, description, category, probability, impact, status,
         treatment, treatmentPlan, owner, targetDate,
         residualProbability, residualImpact, residualNotes, residualEvaluatedAt,
-        auditId, controlIds = [], tags = []
+        auditId, controlIds = [], tags = [],
+        // Nuevos campos CIA
+        tipoActivo, origenRiesgo, amenazas, actividad, riesgoInherente,
+        impactoFinanciero, impactoContinuidad, impactoImagen, impactoLegal,
+        nivelConfidencialidad, nivelIntegridad, nivelDisponibilidad, nivelPrivacidad,
+        probabilidadNivel, valorRiesgo, impactoNivel,
+        estadoControl, clasificacionResidual, estadoRevision
     } = req.body;
 
     if (!name) {
@@ -119,6 +125,26 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
             residualNotes,
             residualEvaluatedAt: residualEvaluatedAt ? new Date(residualEvaluatedAt) : null,
             auditId: auditId ? parseInt(auditId) : null,
+            // Nuevos campos
+            tipoActivo,
+            origenRiesgo,
+            amenazas,
+            actividad,
+            riesgoInherente,
+            impactoFinanciero,
+            impactoContinuidad,
+            impactoImagen,
+            impactoLegal,
+            nivelConfidencialidad,
+            nivelIntegridad,
+            nivelDisponibilidad,
+            nivelPrivacidad,
+            probabilidadNivel,
+            valorRiesgo: valorRiesgo ? parseFloat(valorRiesgo) : null,
+            impactoNivel,
+            estadoControl,
+            clasificacionResidual,
+            estadoRevision,
             ...(controlIds.length > 0 && {
                 controls: {
                     create: controlIds.map(controlId => ({ controlId }))
@@ -156,7 +182,13 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
         name, description, category, probability, impact, status, treatment,
         treatmentPlan, owner, targetDate,
         residualProbability, residualImpact, residualNotes, residualEvaluatedAt,
-        controlIds, tags
+        controlIds, tags,
+        // Nuevos campos CIA
+        tipoActivo, origenRiesgo, amenazas, actividad, riesgoInherente,
+        impactoFinanciero, impactoContinuidad, impactoImagen, impactoLegal,
+        nivelConfidencialidad, nivelIntegridad, nivelDisponibilidad, nivelPrivacidad,
+        probabilidadNivel, valorRiesgo, impactoNivel,
+        estadoControl, clasificacionResidual, estadoRevision
     } = req.body;
 
     const risk = await prisma.risk.update({
@@ -175,7 +207,27 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
             ...(residualProbability !== undefined && { residualProbability }),
             ...(residualImpact !== undefined && { residualImpact }),
             ...(residualNotes !== undefined && { residualNotes }),
-            ...(residualEvaluatedAt !== undefined && { residualEvaluatedAt: residualEvaluatedAt ? new Date(residualEvaluatedAt) : null })
+            ...(residualEvaluatedAt !== undefined && { residualEvaluatedAt: residualEvaluatedAt ? new Date(residualEvaluatedAt) : null }),
+            // Nuevos campos
+            ...(tipoActivo !== undefined && { tipoActivo }),
+            ...(origenRiesgo !== undefined && { origenRiesgo }),
+            ...(amenazas !== undefined && { amenazas }),
+            ...(actividad !== undefined && { actividad }),
+            ...(riesgoInherente !== undefined && { riesgoInherente }),
+            ...(impactoFinanciero !== undefined && { impactoFinanciero }),
+            ...(impactoContinuidad !== undefined && { impactoContinuidad }),
+            ...(impactoImagen !== undefined && { impactoImagen }),
+            ...(impactoLegal !== undefined && { impactoLegal }),
+            ...(nivelConfidencialidad !== undefined && { nivelConfidencialidad }),
+            ...(nivelIntegridad !== undefined && { nivelIntegridad }),
+            ...(nivelDisponibilidad !== undefined && { nivelDisponibilidad }),
+            ...(nivelPrivacidad !== undefined && { nivelPrivacidad }),
+            ...(probabilidadNivel !== undefined && { probabilidadNivel }),
+            ...(valorRiesgo !== undefined && { valorRiesgo: valorRiesgo ? parseFloat(valorRiesgo) : null }),
+            ...(impactoNivel !== undefined && { impactoNivel }),
+            ...(estadoControl !== undefined && { estadoControl }),
+            ...(clasificacionResidual !== undefined && { clasificacionResidual }),
+            ...(estadoRevision !== undefined && { estadoRevision })
         }
     });
 

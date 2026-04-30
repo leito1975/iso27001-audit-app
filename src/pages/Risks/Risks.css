@@ -538,3 +538,220 @@
 .lifecycle-mitigado       { background: rgba(34,197,94,0.15);   color: #22c55e; }
 .lifecycle-aceptado       { background: rgba(99,102,241,0.15);  color: #818cf8; }
 .lifecycle-cerrado        { background: rgba(16,185,129,0.15);  color: #10b981; }
+
+/* NEW SECTIONS: Risk Sections with Collapsible Headers */
+.risk-section {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    overflow: hidden;
+}
+
+.risk-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-bg-tertiary);
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.risk-section-header:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.risk-section-title {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.risk-section-content {
+    padding: var(--space-lg);
+    background: var(--color-bg-secondary);
+}
+
+/* Impact Dimensions Grid */
+.impact-dims-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.impact-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+}
+
+.impact-checkbox input {
+    accent-color: var(--color-primary);
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.impact-label {
+    display: inline-flex;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.impact-label.financial {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+.impact-label.continuity {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+
+.impact-label.image {
+    background: rgba(168, 85, 247, 0.15);
+    color: #d8b4fe;
+}
+
+.impact-label.legal {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.impact-checkbox input:checked + .impact-label {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* CIA Grid */
+.cia-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+}
+
+/* Risk Score Card */
+.risk-score-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    background: var(--color-bg-tertiary);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    margin-top: var(--space-lg);
+    text-align: center;
+}
+
+.score-value {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: var(--space-sm);
+}
+
+.score-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.score-impact {
+    display: flex;
+    justify-content: center;
+}
+
+/* Impact Level Badges */
+.impact-level-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.impact-level-badge.impact-muy-bajo {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.impact-level-badge.impact-bajo {
+    background: rgba(6, 182, 212, 0.2);
+    color: #06b6d4;
+}
+
+.impact-level-badge.impact-medio {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.impact-level-badge.impact-alto {
+    background: rgba(249, 115, 22, 0.2);
+    color: #f97316;
+}
+
+.impact-level-badge.impact-muy-alto {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.impact-level-badge.impact-crítico {
+    background: rgba(220, 38, 38, 0.2);
+    color: #dc2626;
+}
+
+/* Risk Value Badge (in table) */
+.risk-value-badge {
+    display: inline-flex;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    font-family: monospace;
+}
+
+/* CIA Level Badge (in table) */
+.cia-level-badge {
+    display: inline-flex;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--color-primary);
+    font-family: monospace;
+}
+
+/* Modal with wider size for CIA methodology */
+.modal-xl {
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+    .impact-dims-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .cia-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .risk-section-content {
+        padding: var(--space-md);
+    }
+
+    .modal-xl {
+        max-width: 95vw;
+    }
+}

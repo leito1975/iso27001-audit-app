@@ -208,6 +208,37 @@ model Risk {
   auditId             Int?         @map("audit_id")
   createdAt            DateTime     @default(now()) @map("created_at")
 
+  // Nuevos campos metodología CIA
+  tipoActivo           String?      @map("tipo_activo")
+  origenRiesgo         String?      @map("origen_riesgo")
+  amenazas             String?
+  actividad            String?
+  riesgoInherente      String?      @map("riesgo_inherente")
+
+  // Dimensiones de impacto (SI/NO)
+  impactoFinanciero    Boolean?     @default(false) @map("impacto_financiero")
+  impactoContinuidad   Boolean?     @default(false) @map("impacto_continuidad")
+  impactoImagen        Boolean?     @default(false) @map("impacto_imagen")
+  impactoLegal         Boolean?     @default(false) @map("impacto_legal")
+
+  // CIA + Privacidad (Menor/Moderado/Mayor/Crítico)
+  nivelConfidencialidad String?     @map("nivel_confidencialidad")
+  nivelIntegridad      String?      @map("nivel_integridad")
+  nivelDisponibilidad  String?      @map("nivel_disponibilidad")
+  nivelPrivacidad      String?      @map("nivel_privacidad")
+
+  // Probabilidad textual
+  probabilidadNivel    String?      @map("probabilidad_nivel")
+
+  // Scores calculados (se guardan para reportes)
+  valorRiesgo          Float?       @map("valor_riesgo")
+  impactoNivel         String?      @map("impacto_nivel")
+
+  // Control y seguimiento
+  estadoControl        String?      @map("estado_control")
+  clasificacionResidual String?     @map("clasificacion_residual")
+  estadoRevision       String?      @map("estado_revision")
+
   audit       Audit?      @relation(fields: [auditId], references: [id], onDelete: Cascade)
   controls    RiskControl[]
   tags        RiskTag[]
