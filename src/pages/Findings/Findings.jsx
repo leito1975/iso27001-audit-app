@@ -31,6 +31,7 @@ const Findings = () => {
         type: 'observation',
         severity: 'medium',
         status: 'open',
+        clausulaRef: '',
         controlIds: [],
         description: '',
         evidence: '',
@@ -62,6 +63,7 @@ const Findings = () => {
                 type: finding.type || 'observation',
                 severity: finding.severity || 'medium',
                 status: finding.status || 'open',
+                clausulaRef: finding.clausulaRef || '',
                 controlIds: (finding.controls || []).map(c => c.id),
                 description: finding.description || '',
                 evidence: finding.evidence || '',
@@ -75,6 +77,7 @@ const Findings = () => {
                 type: 'observation',
                 severity: 'medium',
                 status: 'open',
+                clausulaRef: '',
                 controlIds: [],
                 description: '',
                 evidence: '',
@@ -417,6 +420,17 @@ const Findings = () => {
                                     </div>
                                 </div>
 
+                                <div className="form-group">
+                                    <label className="form-label">Cláusula ISO Relacionada</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.clausulaRef}
+                                        onChange={(e) => setFormData({ ...formData, clausulaRef: e.target.value })}
+                                        placeholder="ej: 5.14, 9.2, A.5.1 (separar con comas si son varias)"
+                                    />
+                                </div>
+
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label className="form-label">Controles Relacionados</label>
@@ -604,17 +618,50 @@ const Findings = () => {
                                                 <div className="form-row">
                                                     <div className="form-group">
                                                         <label className="form-label">Indicador</label>
-                                                        <input className="form-input" value={ncData.indicador} onChange={e => setNcData({...ncData, indicador: e.target.value})} />
+                                                        <select className="form-select" value={ncData.indicador} onChange={e => setNcData({...ncData, indicador: e.target.value, valorIndicador: '', metaIndicador: ''})}>
+                                                            <option value="">Seleccionar...</option>
+                                                            <option value="Cuantitativo">Cuantitativo — KPI medible (ej: % madurez)</option>
+                                                            <option value="Cualitativo">Cualitativo — Cumplimiento Si/No</option>
+                                                        </select>
                                                     </div>
                                                     <div className="form-group">
                                                         <label className="form-label">Valor</label>
-                                                        <input className="form-input" value={ncData.valorIndicador} onChange={e => setNcData({...ncData, valorIndicador: e.target.value})} />
+                                                        <input
+                                                            className="form-input"
+                                                            value={ncData.valorIndicador}
+                                                            onChange={e => setNcData({...ncData, valorIndicador: e.target.value})}
+                                                            placeholder={
+                                                                ncData.indicador === 'Cuantitativo'
+                                                                    ? 'ej: 45% (valor actual del KPI del control)'
+                                                                    : ncData.indicador === 'Cualitativo'
+                                                                        ? 'Si / No (¿Se cumplió?)'
+                                                                        : 'Primero seleccioná el tipo de indicador'
+                                                            }
+                                                        />
                                                     </div>
                                                     <div className="form-group">
                                                         <label className="form-label">Meta</label>
-                                                        <input className="form-input" value={ncData.metaIndicador} onChange={e => setNcData({...ncData, metaIndicador: e.target.value})} />
+                                                        <input
+                                                            className="form-input"
+                                                            value={ncData.metaIndicador}
+                                                            onChange={e => setNcData({...ncData, metaIndicador: e.target.value})}
+                                                            placeholder={
+                                                                ncData.indicador === 'Cuantitativo'
+                                                                    ? '≥ 60% (eficaz si valor ≥ meta)'
+                                                                    : ncData.indicador === 'Cualitativo'
+                                                                        ? 'ej: Documentación aprobada / Certificación'
+                                                                        : 'Primero seleccioná el tipo de indicador'
+                                                            }
+                                                        />
                                                     </div>
                                                 </div>
+                                                {ncData.indicador && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '-8px', marginBottom: '8px', padding: '8px 10px', background: 'rgba(148,163,184,0.06)', borderRadius: '6px', borderLeft: '3px solid rgba(148,163,184,0.3)' }}>
+                                                        {ncData.indicador === 'Cuantitativo'
+                                                            ? '📊 Cuantitativo: indicá el KPI del control relacionado. La NC es eficaz cuando el Valor alcanza o supera la Meta (≥ 60%).'
+                                                            : '✅ Cualitativo: indicá Si/No en Valor según si se cumplió la corrección. Establecé la Meta según el tipo de NC.'}
+                                                    </div>
+                                                )}
                                                 <div className="form-row">
                                                     <div className="form-group">
                                                         <label className="form-label">Verificador</label>

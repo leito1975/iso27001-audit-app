@@ -96,6 +96,7 @@ model Finding {
   severity       String?
   evidence       String?
   recommendation String?
+  clausulaRef    String?          @map("clausula_ref")
   auditId        Int?             @map("audit_id")
   createdBy      Int?             @map("created_by")
   createdAt      DateTime         @default(now()) @map("created_at")

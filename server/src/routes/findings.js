@@ -97,7 +97,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // Create finding
 router.post('/', authenticateToken, asyncHandler(async (req, res) => {
-    const { title, description, type, status, severity, evidence, recommendation, auditId, controlIds = [], tags = [] } = req.body;
+    const { title, description, type, status, severity, evidence, recommendation, clausulaRef, auditId, controlIds = [], tags = [] } = req.body;
 
     if (!title) {
         return res.status(400).json({ error: 'El título es requerido' });
@@ -112,6 +112,7 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
             severity,
             evidence,
             recommendation,
+            clausulaRef: clausulaRef || null,
             auditId: auditId ? parseInt(auditId) : null,
             createdBy: req.user.id,
             ...(controlIds.length > 0 && {
@@ -146,7 +147,7 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
 // Update finding
 router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { title, description, type, status, severity, evidence, recommendation, controlIds, tags } = req.body;
+    const { title, description, type, status, severity, evidence, recommendation, clausulaRef, controlIds, tags } = req.body;
 
     const finding = await prisma.finding.update({
         where: { id: parseInt(id) },
@@ -157,7 +158,8 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
             ...(status !== undefined && { status }),
             ...(severity !== undefined && { severity }),
             ...(evidence !== undefined && { evidence }),
-            ...(recommendation !== undefined && { recommendation })
+            ...(recommendation !== undefined && { recommendation }),
+            ...(clausulaRef !== undefined && { clausulaRef: clausulaRef || null })
         }
     });
 
