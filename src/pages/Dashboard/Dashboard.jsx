@@ -43,7 +43,7 @@ const TOOLTIP_STYLE = {
 };
 
 const Dashboard = () => {
-    const { getStatistics, controlAssessments, clauseAssessments, controls, actionPlans, selectedNorm } = useAudit();
+    const { getStatistics, controlAssessments, clauseAssessments, controls, actionPlans, risks, selectedNorm } = useAudit();
     const stats = getStatistics();
 
     // Define dynamic categories and clauses based on selected norm
@@ -123,6 +123,29 @@ const Dashboard = () => {
             color: s.color
         }))
         .filter(d => d.value > 0);
+
+    // ─── RISKS (CIA methodology) ─────────────────────────────────────────────────
+
+    const CIA_LEVELS = [
+        { label: 'Crítico',  color: '#dc2626' },
+        { label: 'Muy Alto', color: '#ef4444' },
+        { label: 'Alto',     color: '#f97316' },
+        { label: 'Medio',    color: '#f59e0b' },
+        { label: 'Bajo',     color: '#06b6d4' },
+        { label: 'Muy Bajo', color: '#22c55e' },
+    ];
+
+    const risksByCiaLevel = CIA_LEVELS.map(({ label, color }) => ({
+        label,
+        color,
+        count: risks.filter(r => r.impactoNivel === label).length
+    })).filter(r => r.count > 0);
+
+    const risksWithNoLevel = risks.filter(r => !r.impactoNivel).length;
+
+    const risksTreatedPct = stats.risks.total > 0
+        ? Math.round((stats.risks.treated / stats.risks.total) * 100)
+        : 0;
 
     // ─── OVERALL MATURITY ────────────────────────────────────────────────────────
 
@@ -217,10 +240,13 @@ const Dashboard = () => {
                     <div className="kpi-icon danger"><AlertTriangle /></div>
                     <div className="kpi-content">
                         <span className="kpi-label">Riesgos Activos</span>
-                        <span className="kpi-value">{stats.risks.open}</span>
+                        <span className="kpi-value">
+                            {stats.risks.open}
+                            <span style={{ fontSize: '1.1rem', fontWeight: 400, color: 'var(--color-text-muted)' }}>/{stats.risks.total}</span>
+                        </span>
                         <span className="kpi-trend" style={{ color: stats.risks.critical > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' }}>
-                            <Shield size={14} />
-                            {stats.risks.critical} críticos de {stats.risks.total} totales
+                            <AlertTriangle size={14} />
+                            {stats.risks.critical} críticos/muy altos · {risksTreatedPct}% tratados
                         </span>
                     </div>
                 </div>
@@ -426,11 +452,49 @@ const Dashboard = () => {
                         <h3 className="card-title">Riesgos</h3>
                         <AlertTriangle className="card-icon" />
                     </div>
-                    <div className="summary-grid">
-                        <div className="summary-item"><span className="summary-value">{stats.risks.total}</span><span className="summary-label">Total</span></div>
-                        <div className="summary-item"><span className="summary-value danger">{stats.risks.critical}</span><span className="summary-label">Críticos</span></div>
-                        <div className="summary-item"><span className="summary-value warning">{stats.risks.open}</span><span className="summary-label">Activos</span></div>
-                        <div className="summary-item"><span className="summary-value success">{stats.risks.treated}</span><span className="summary-label">Tratados</span></div>
+
+                    {/* CIA distribution bars */}
+                    {risksByCiaLevel.length > 0 ? (
+                        <div className="risk-cia-dist">
+                            {risksByCiaLevel.map(({ label, color, count }) => (
+                                <div key={label} className="risk-cia-row">
+                                    <span className="risk-cia-label">{label}</span>
+                                    <div className="risk-cia-track">
+                                        <div
+                                            className="risk-cia-fill"
+                                            style={{
+                                                width: `${Math.round((count / stats.risks.total) * 100)}%`,
+                                                background: color
+                                            }}
+                                        />
+                                    </div>
+                                    <span className="risk-cia-count" style={{ color }}>{count}</span>
+                                </div>
+                            ))}
+                            {risksWithNoLevel > 0 && (
+                                <div className="risk-cia-row">
+                                    <span className="risk-cia-label" style={{ color: 'var(--color-text-muted)' }}>Sin nivel</span>
+                                    <div className="risk-cia-track">
+                                        <div className="risk-cia-fill" style={{ width: `${Math.round((risksWithNoLevel / stats.risks.total) * 100)}%`, background: 'var(--color-text-muted)' }} />
+                                    </div>
+                                    <span className="risk-cia-count" style={{ color: 'var(--color-text-muted)' }}>{risksWithNoLevel}</span>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="summary-grid">
+                            <div className="summary-item"><span className="summary-value">{stats.risks.total}</span><span className="summary-label">Total</span></div>
+                            <div className="summary-item"><span className="summary-value warning">{stats.risks.open}</span><span className="summary-label">Activos</span></div>
+                            <div className="summary-item"><span className="summary-value success">{stats.risks.treated}</span><span className="summary-label">Tratados</span></div>
+                        </div>
+                    )}
+
+                    <div className="findings-status-footer">
+                        <span><strong>{stats.risks.open}</strong> activos</span>
+                        <span className="footer-divider">·</span>
+                        <span><strong>{stats.risks.treated}</strong> tratados</span>
+                        <span className="footer-divider">·</span>
+                        <span><strong>{stats.risks.total}</strong> total</span>
                     </div>
                 </div>
 

@@ -529,8 +529,12 @@ export const AuditProvider = ({ children }) => {
         const risksOpen = risks.filter(r => !r.status || ACTIVE_STATUSES.includes(r.status)).length;
         const risksTreated = risks.filter(r => TREATED_STATUSES.includes(r.status)).length;
         const risksCritical = risks.filter(r => {
-            const score = (r.probability || 1) * (r.impact || 1);
-            return score >= 15 && (!r.status || ACTIVE_STATUSES.includes(r.status));
+            const active = !r.status || ACTIVE_STATUSES.includes(r.status);
+            if (!active) return false;
+            // CIA methodology (new)
+            if (r.impactoNivel) return r.impactoNivel === 'Crítico' || r.impactoNivel === 'Muy Alto';
+            // Legacy numeric fallback
+            return (r.probability || 1) * (r.impact || 1) >= 15;
         }).length;
 
         const actionsPending = actionPlans.filter(a => a.status === 'pending' || a.status === 'pendiente').length;
