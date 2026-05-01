@@ -24,11 +24,40 @@ function formatDate(d) {
     try { return new Date(d).toLocaleDateString('es-ES'); } catch { return '—'; }
 }
 
-function riskLevelLabel(score) {
-    if (score >= 15) return { label: 'Crítico', color: '#ef4444' };
-    if (score >= 9)  return { label: 'Alto',    color: '#f97316' };
-    if (score >= 4)  return { label: 'Medio',   color: '#eab308' };
-    return                  { label: 'Bajo',    color: '#22c55e' };
+// CIA methodology: uses impactoNivel (string) if available, otherwise falls back to numeric score
+function riskLevelFromCia(risk) {
+    const nivel = risk.impactoNivel;
+    if (nivel) {
+        const map = {
+            'Crítico':  { label: 'Crítico',  color: '#dc2626', cls: 'critical' },
+            'Muy Alto': { label: 'Muy Alto', color: '#ef4444', cls: 'critical' },
+            'Alto':     { label: 'Alto',     color: '#f97316', cls: 'high'     },
+            'Medio':    { label: 'Medio',    color: '#eab308', cls: 'medium'   },
+            'Bajo':     { label: 'Bajo',     color: '#22c55e', cls: 'low'      },
+            'Muy Bajo': { label: 'Muy Bajo', color: '#22c55e', cls: 'low'      },
+        };
+        return map[nivel] || { label: nivel, color: '#64748b', cls: 'pending' };
+    }
+    // Legacy numeric fallback
+    const score = (risk.probability || 0) * (risk.impact || 0);
+    if (score >= 15) return { label: 'Crítico', color: '#ef4444', cls: 'critical' };
+    if (score >= 9)  return { label: 'Alto',    color: '#f97316', cls: 'high'     };
+    if (score >= 4)  return { label: 'Medio',   color: '#eab308', cls: 'medium'   };
+    if (score > 0)   return { label: 'Bajo',    color: '#22c55e', cls: 'low'      };
+    return { label: '—', color: '#64748b', cls: 'pending' };
+}
+
+// Count risks by CIA level (works for both old and new methodology)
+function countByCiaLevel(risks, levels) {
+    return levels.map(lvl => risks.filter(r => {
+        if (r.impactoNivel) return r.impactoNivel === lvl;
+        const s = (r.probability||0)*(r.impact||0);
+        if (lvl === 'Crítico')  return s >= 15;
+        if (lvl === 'Alto')     return s >= 9 && s < 15;
+        if (lvl === 'Medio')    return s >= 4 && s < 9;
+        if (lvl === 'Bajo')     return s > 0 && s < 4;
+        return false;
+    }).length);
 }
 
 const getReportTemplates = (norm) => {
@@ -481,8 +510,9 @@ function generateRiskReport(risks, auditInfo, selectedNorm) {
     const normLabel = selectedNorm === 'iso42001' ? 'ISO 42001:2023' : 'ISO 27001:2022';
     const color = '#ef4444';
     const total = risks.length;
-    const critical = risks.filter(r => (r.probability||0)*(r.impact||0) >= 15).length;
-    const high = risks.filter(r => { const s=(r.probability||0)*(r.impact||0); return s>=9&&s<15; }).length;
+    const [nCritico, nMuyAlto, nAlto, nMedio] = countByCiaLevel(risks, ['Crítico', 'Muy Alto', 'Alto', 'Medio']);
+    const nAltosCriticos = nCritico + nMuyAlto;
+
     return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Evaluación de Riesgos — ${normLabel}</title>${buildStyles(color)}</head><body>
     <div class="header">
       <h1>Evaluación de Riesgos — ${normLabel}</h1>
@@ -490,29 +520,33 @@ function generateRiskReport(risks, auditInfo, selectedNorm) {
     </div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-value">${total}</div><div class="kpi-label">Total riesgos</div></div>
-      <div class="kpi"><div class="kpi-value" style="color:#ef4444">${critical}</div><div class="kpi-label">Críticos</div></div>
-      <div class="kpi"><div class="kpi-value" style="color:#f97316">${high}</div><div class="kpi-label">Altos</div></div>
-      <div class="kpi"><div class="kpi-value">${risks.filter(r=>(r.probability||0)*(r.impact||0)<9&&(r.probability||0)*(r.impact||0)>0).length}</div><div class="kpi-label">Medios/Bajos</div></div>
+      <div class="kpi"><div class="kpi-value" style="color:#dc2626">${nAltosCriticos}</div><div class="kpi-label">Críticos / Muy Altos</div></div>
+      <div class="kpi"><div class="kpi-value" style="color:#f97316">${nAlto}</div><div class="kpi-label">Altos</div></div>
+      <div class="kpi"><div class="kpi-value" style="color:#eab308">${nMedio}</div><div class="kpi-label">Medios</div></div>
     </div>
     <table>
-      <thead><tr><th>ID</th><th>Riesgo</th><th>P</th><th>I</th><th>Puntuación</th><th>Nivel</th><th>Estrategia</th><th>Residual</th><th>Responsable</th><th>F. Objetivo</th><th>Plan de Tratamiento</th></tr></thead>
+      <thead><tr><th>ID</th><th>Riesgo</th><th>Tipo Activo</th><th>CIA</th><th>Probabilidad</th><th>Valor</th><th>Nivel</th><th>Residual</th><th>Estado</th><th>Responsable</th><th>F. Objetivo</th></tr></thead>
       <tbody>${risks.map(r => {
-          const score = (r.probability||0)*(r.impact||0);
-          const { label, color: c } = riskLevelLabel(score);
-          const rScore = r.residualProbability && r.residualImpact ? r.residualProbability * r.residualImpact : null;
-          const { label: rLabel } = rScore ? riskLevelLabel(rScore) : { label: '—' };
-          const treatMap = { mitigate:'Mitigar', transfer:'Transferir', accept:'Aceptar', avoid:'Evitar' };
+          const { label, color: c, cls } = riskLevelFromCia(r);
+          const residualLevel = r.clasificacionResidual
+              ? riskLevelFromCia({ impactoNivel: r.clasificacionResidual })
+              : { label: '—', cls: 'pending' };
+          const ciaStr = (r.nivelConfidencialidad && r.nivelIntegridad && r.nivelDisponibilidad && r.nivelPrivacidad)
+              ? `C:${r.nivelConfidencialidad[0]} I:${r.nivelIntegridad[0]} D:${r.nivelDisponibilidad[0]} P:${r.nivelPrivacidad[0]}`
+              : '—';
+          const statusMap = { 'identificado':'Identificado', 'en-tratamiento':'En tratamiento', 'mitigado':'Mitigado', 'aceptado':'Aceptado', 'cerrado':'Cerrado' };
           return `<tr>
-            <td style="font-family:monospace">R-${escHtml(r.id)}</td>
-            <td><strong>${escHtml(r.name||r.title)}</strong><br><span style="color:#64748b;font-size:11px">${escHtml((r.description||'').substring(0,100))}</span></td>
-            <td>${r.probability||'—'}</td><td>${r.impact||'—'}</td>
-            <td style="font-weight:600;color:${c}">${score||'—'}</td>
-            <td><span class="badge badge-${score>=15?'critical':score>=9?'high':score>=4?'medium':'low'}">${escHtml(label)}</span></td>
-            <td>${escHtml(treatMap[r.treatment]||r.treatment||'—')}</td>
-            <td>${rLabel}</td>
-            <td>${escHtml(r.owner||'—')}</td>
-            <td>${formatDate(r.targetDate)}</td>
-            <td style="font-size:11px">${escHtml((r.treatmentPlan||'').substring(0,120))}</td>
+            <td style="font-family:monospace;white-space:nowrap">R-${escHtml(r.id)}</td>
+            <td><strong>${escHtml(r.name||r.title)}</strong><br><span style="color:#64748b;font-size:11px">${escHtml((r.description||'').substring(0,90))}</span></td>
+            <td style="font-size:11px">${escHtml(r.tipoActivo||'—')}</td>
+            <td style="font-family:monospace;font-size:11px;white-space:nowrap">${escHtml(ciaStr)}</td>
+            <td style="font-size:11px;white-space:nowrap">${escHtml(r.probabilidadNivel||'—')}</td>
+            <td style="font-weight:700;color:${c}">${r.valorRiesgo != null ? parseFloat(r.valorRiesgo).toFixed(2) : '—'}</td>
+            <td><span class="badge badge-${cls}">${escHtml(label)}</span></td>
+            <td><span class="badge badge-${residualLevel.cls}">${escHtml(residualLevel.label)}</span></td>
+            <td style="font-size:11px">${escHtml(statusMap[r.status]||r.status||'—')}</td>
+            <td style="font-size:11px">${escHtml(r.owner||'—')}</td>
+            <td style="white-space:nowrap;font-size:11px">${formatDate(r.targetDate)}</td>
           </tr>`;
       }).join('')}</tbody>
     </table>
@@ -590,7 +624,7 @@ function generateComplianceSummary(controls, controlAssessments, risks, findings
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-value">${compliance}%</div><div class="kpi-label">Cobertura de evaluación</div></div>
       <div class="kpi"><div class="kpi-value">${avgMaturity}</div><div class="kpi-label">Madurez promedio (0-5)</div></div>
-      <div class="kpi"><div class="kpi-value" style="color:#ef4444">${risks.filter(r=>(r.probability||0)*(r.impact||0)>=15).length}</div><div class="kpi-label">Riesgos críticos</div></div>
+      <div class="kpi"><div class="kpi-value" style="color:#ef4444">${countByCiaLevel(risks,['Crítico','Muy Alto']).reduce((a,b)=>a+b,0)}</div><div class="kpi-label">Riesgos críticos/muy altos</div></div>
       <div class="kpi"><div class="kpi-value" style="color:#f97316">${findings.filter(f=>f.status==='abierto'||f.status==='open').length}</div><div class="kpi-label">Hallazgos abiertos</div></div>
     </div>
     <h2>Cumplimiento por Dominio (Anexo A)</h2>
@@ -609,11 +643,12 @@ function generateComplianceSummary(controls, controlAssessments, risks, findings
     <h2>Estado de Riesgos</h2>
     <table>
       <thead><tr><th>Nivel</th><th>Cantidad</th></tr></thead>
-      <tbody>
-        <tr><td><span class="badge badge-critical">Crítico</span></td><td>${risks.filter(r=>(r.probability||0)*(r.impact||0)>=15).length}</td></tr>
-        <tr><td><span class="badge badge-high">Alto</span></td><td>${risks.filter(r=>{const s=(r.probability||0)*(r.impact||0);return s>=9&&s<15;}).length}</td></tr>
-        <tr><td><span class="badge badge-medium">Medio</span></td><td>${risks.filter(r=>{const s=(r.probability||0)*(r.impact||0);return s>=4&&s<9;}).length}</td></tr>
-        <tr><td><span class="badge badge-low">Bajo</span></td><td>${risks.filter(r=>(r.probability||0)*(r.impact||0)<4&&(r.probability||0)*(r.impact||0)>0).length}</td></tr>
+      <tbody>${['Crítico','Muy Alto','Alto','Medio','Bajo','Muy Bajo'].map(lvl => {
+        const [n] = countByCiaLevel(risks, [lvl]);
+        if (n === 0) return '';
+        const cls = ['Crítico','Muy Alto'].includes(lvl)?'critical':lvl==='Alto'?'high':lvl==='Medio'?'medium':'low';
+        return `<tr><td><span class="badge badge-${cls}">${lvl}</span></td><td>${n}</td></tr>`;
+      }).join('')}
       </tbody>
     </table>
     <div class="footer"><span>AuditIA — AonikLabs</span><span>${formatDate(new Date())}</span></div>
