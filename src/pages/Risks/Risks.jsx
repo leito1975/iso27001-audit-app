@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Shield, Tag, ChevronDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Shield, ChevronDown } from 'lucide-react';
 import { useAudit } from '../../context/AuditContext';
-import { RISK_LEVELS, getRiskLevel } from '../../data/iso27001-controls';
 import TagSelector from '../../components/Tags/TagSelector';
 import './Risks.css';
 
@@ -336,99 +335,103 @@ const Risks = () => {
                 </button>
             </div>
 
-            {/* Risk Matrix */}
-            <div className="card risk-matrix-section">
-                <div className="card-header">
-                    <h3 className="card-title">Matriz de Riesgos</h3>
-                </div>
-                <div className="risk-matrix">
-                    <div className="matrix-y-label">
-                        <span>Probabilidad</span>
-                    </div>
-                    <div className="matrix-grid">
-                        {[5, 4, 3, 2, 1].map(prob => (
-                            <div key={prob} className="matrix-row">
-                                <div className="matrix-row-label">{prob}</div>
-                                {[1, 2, 3, 4, 5].map(imp => {
-                                    const riskLevel = getRiskLevel(prob, imp);
-                                    const risksInCell = risks.filter(
-                                        r => r.probability === prob && r.impact === imp
-                                    );
-                                    return (
-                                        <div
-                                            key={`${prob}-${imp}`}
-                                            className={`matrix-cell ${riskLevel.class}`}
-                                            title={`P:${prob} x I:${imp} = ${riskLevel.level}`}
-                                        >
-                                            {risksInCell.length > 0 && (
-                                                <span className="cell-count">{risksInCell.length}</span>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                        <div className="matrix-x-labels">
-                            <span></span>
-                            {[1, 2, 3, 4, 5].map(i => (
-                                <span key={i}>{i}</span>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="matrix-x-label">
-                        <span>Impacto</span>
-                    </div>
-                </div>
-
-                <div className="matrix-legend">
-                    <div className="legend-item">
-                        <span className="legend-color critical"></span>
-                        <span>Crítico (15-25)</span>
-                    </div>
-                    <div className="legend-item">
-                        <span className="legend-color high"></span>
-                        <span>Alto (9-14)</span>
-                    </div>
-                    <div className="legend-item">
-                        <span className="legend-color medium"></span>
-                        <span>Medio (4-8)</span>
-                    </div>
-                    <div className="legend-item">
-                        <span className="legend-color low"></span>
-                        <span>Bajo (1-3)</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Risk Stats */}
-            <div className="risk-stats">
+            {/* Risk Overview */}
+            <div className="risk-overview-grid">
+                {/* Stats cards */}
                 <div className="stat-card critical">
                     <AlertTriangle />
                     <span className="stat-number">
-                        {risks.filter(r => r.valorRiesgo && r.valorRiesgo > 20).length}
+                        {risks.filter(r => r.impactoNivel === 'Crítico' || (r.valorRiesgo && r.valorRiesgo > 25)).length}
+                    </span>
+                    <span className="stat-label">Críticos</span>
+                </div>
+                <div className="stat-card critical" style={{ '--stat-color': '#ef4444' }}>
+                    <AlertTriangle />
+                    <span className="stat-number">
+                        {risks.filter(r => r.impactoNivel === 'Muy Alto').length}
                     </span>
                     <span className="stat-label">Muy Altos</span>
                 </div>
                 <div className="stat-card high">
                     <AlertTriangle />
                     <span className="stat-number">
-                        {risks.filter(r => r.valorRiesgo && r.valorRiesgo > 15 && r.valorRiesgo <= 20).length}
+                        {risks.filter(r => r.impactoNivel === 'Alto').length}
                     </span>
                     <span className="stat-label">Altos</span>
                 </div>
                 <div className="stat-card medium">
                     <Shield />
                     <span className="stat-number">
-                        {risks.filter(r => r.valorRiesgo && r.valorRiesgo > 10 && r.valorRiesgo <= 15).length}
+                        {risks.filter(r => r.impactoNivel === 'Medio').length}
                     </span>
                     <span className="stat-label">Medios</span>
                 </div>
                 <div className="stat-card low">
                     <Shield />
                     <span className="stat-number">
-                        {risks.filter(r => !r.valorRiesgo || r.valorRiesgo <= 10).length}
+                        {risks.filter(r => r.impactoNivel === 'Bajo' || r.impactoNivel === 'Muy Bajo' || !r.impactoNivel).length}
                     </span>
-                    <span className="stat-label">Bajos/Muy Bajos</span>
+                    <span className="stat-label">Bajos</span>
+                </div>
+
+                {/* Distribution bar */}
+                <div className="card risk-distribution-card">
+                    <div className="card-header" style={{ marginBottom: '12px' }}>
+                        <h3 className="card-title" style={{ fontSize: '13px' }}>Distribución por nivel</h3>
+                    </div>
+                    {risks.length === 0 ? (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>Sin riesgos registrados</div>
+                    ) : (
+                        <div className="dist-bars">
+                            {[
+                                { label: 'Crítico',  color: '#dc2626' },
+                                { label: 'Muy Alto', color: '#ef4444' },
+                                { label: 'Alto',     color: '#f97316' },
+                                { label: 'Medio',    color: '#f59e0b' },
+                                { label: 'Bajo',     color: '#06b6d4' },
+                                { label: 'Muy Bajo', color: '#22c55e' }
+                            ].map(({ label, color }) => {
+                                const count = risks.filter(r => r.impactoNivel === label).length;
+                                const pct = risks.length > 0 ? Math.round(count / risks.length * 100) : 0;
+                                return (
+                                    <div key={label} className="dist-bar-row">
+                                        <span className="dist-bar-label">{label}</span>
+                                        <div className="dist-bar-track">
+                                            <div className="dist-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                                        </div>
+                                        <span className="dist-bar-count" style={{ color }}>{count}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* Tratamiento status */}
+                <div className="card risk-treatment-card">
+                    <div className="card-header" style={{ marginBottom: '12px' }}>
+                        <h3 className="card-title" style={{ fontSize: '13px' }}>Estado de tratamiento</h3>
+                    </div>
+                    {[
+                        { key: 'identificado',   label: 'Identificado',    color: '#94a3b8' },
+                        { key: 'en-tratamiento', label: 'En tratamiento',  color: '#f59e0b' },
+                        { key: 'mitigado',       label: 'Mitigado',        color: '#22c55e' },
+                        { key: 'aceptado',       label: 'Aceptado',        color: '#06b6d4' },
+                        { key: 'cerrado',        label: 'Cerrado',         color: '#64748b' }
+                    ].map(({ key, label, color }) => {
+                        const count = risks.filter(r => (r.status || 'identificado') === key).length;
+                        if (count === 0) return null;
+                        return (
+                            <div key={key} className="treatment-status-row">
+                                <span className="treatment-dot" style={{ background: color }} />
+                                <span className="treatment-label">{label}</span>
+                                <span className="treatment-count">{count}</span>
+                            </div>
+                        );
+                    })}
+                    {risks.length === 0 && (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>Sin riesgos</div>
+                    )}
                 </div>
             </div>
 
@@ -443,10 +446,12 @@ const Risks = () => {
                                     <th>Riesgo</th>
                                     <th>Tipo Activo</th>
                                     <th>Nivel CIA</th>
-                                    <th>Probabilidad</th>
+                                    <th>Prob.</th>
                                     <th>Valor</th>
                                     <th>Nivel Impacto</th>
+                                    <th>Riesgo Residual</th>
                                     <th>Estado</th>
+                                    <th>Revisión</th>
                                     <th>Responsable</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -455,6 +460,19 @@ const Risks = () => {
                                 {filteredRisks.map(risk => {
                                     const riskValue = risk.valorRiesgo;
                                     const riskLevel = risk.impactoNivel;
+                                    const hasResidual = risk.clasificacionResidual;
+                                    const statusLabels = {
+                                        'identificado': 'Identificado',
+                                        'en-tratamiento': 'En tratamiento',
+                                        'mitigado': 'Mitigado',
+                                        'aceptado': 'Aceptado',
+                                        'cerrado': 'Cerrado'
+                                    };
+                                    const revisionColors = {
+                                        'No Requiere Acción': '#22c55e',
+                                        'Requiere Acción': '#ef4444',
+                                        'En Seguimiento': '#f59e0b'
+                                    };
                                     return (
                                         <tr key={risk.id}>
                                             <td>
@@ -463,24 +481,23 @@ const Risks = () => {
                                             <td>
                                                 <div className="risk-info">
                                                     <span className="risk-title">{risk.name || risk.title}</span>
-                                                    <span className="risk-desc">{risk.description?.substring(0, 50)}{risk.description?.length > 50 ? '...' : ''}</span>
+                                                    {risk.description && (
+                                                        <span className="risk-desc">{risk.description.substring(0, 55)}{risk.description.length > 55 ? '…' : ''}</span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td>{risk.tipoActivo || '—'}</td>
                                             <td>
                                                 {risk.nivelConfidencialidad && risk.nivelIntegridad && risk.nivelDisponibilidad && risk.nivelPrivacidad ? (
                                                     <span className="cia-level-badge">
-                                                        C:{risk.nivelConfidencialidad[0]}, I:{risk.nivelIntegridad[0]}, D:{risk.nivelDisponibilidad[0]}, P:{risk.nivelPrivacidad[0]}
+                                                        C:{risk.nivelConfidencialidad[0]}&nbsp;I:{risk.nivelIntegridad[0]}&nbsp;D:{risk.nivelDisponibilidad[0]}&nbsp;P:{risk.nivelPrivacidad[0]}
                                                     </span>
                                                 ) : '—'}
                                             </td>
-                                            <td>{risk.probabilidadNivel || '—'}</td>
+                                            <td style={{ whiteSpace: 'nowrap', fontSize: '12px' }}>{risk.probabilidadNivel || '—'}</td>
                                             <td>
                                                 {riskValue !== null && riskValue !== undefined ? (
-                                                    <span className="risk-value-badge" style={{
-                                                        color: getValueColor(riskValue),
-                                                        fontWeight: '600'
-                                                    }}>
+                                                    <span className="risk-value-badge" style={{ color: getValueColor(riskValue), fontWeight: '700' }}>
                                                         {riskValue.toFixed(2)}
                                                     </span>
                                                 ) : '—'}
@@ -493,14 +510,35 @@ const Risks = () => {
                                                 ) : '—'}
                                             </td>
                                             <td>
+                                                {hasResidual ? (
+                                                    <div className="residual-cell">
+                                                        <span className={`impact-level-badge impact-${hasResidual.toLowerCase().replace(/\s/g, '-')}`}>
+                                                            {hasResidual}
+                                                        </span>
+                                                        {risk.probabilidadNivelResidual && (
+                                                            <span className="residual-prob">{risk.probabilidadNivelResidual}</span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Sin evaluar</span>
+                                                )}
+                                            </td>
+                                            <td>
                                                 <span className={`lifecycle-badge lifecycle-${risk.status || 'identificado'}`}>
-                                                    {risk.status === 'identificado' && 'Identificado'}
-                                                    {risk.status === 'en-tratamiento' && 'En tratamiento'}
-                                                    {risk.status === 'mitigado' && 'Mitigado'}
-                                                    {risk.status === 'aceptado' && 'Aceptado'}
-                                                    {risk.status === 'cerrado' && 'Cerrado'}
-                                                    {(!risk.status || !['identificado','en-tratamiento','mitigado','aceptado','cerrado'].includes(risk.status)) && 'Identificado'}
+                                                    {statusLabels[risk.status] || 'Identificado'}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                {risk.estadoRevision ? (
+                                                    <span style={{
+                                                        fontSize: '11px',
+                                                        fontWeight: '600',
+                                                        color: revisionColors[risk.estadoRevision] || 'var(--text-muted)',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {risk.estadoRevision}
+                                                    </span>
+                                                ) : '—'}
                                             </td>
                                             <td>{risk.owner || '—'}</td>
                                             <td>
