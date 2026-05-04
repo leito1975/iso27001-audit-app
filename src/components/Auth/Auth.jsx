@@ -107,7 +107,14 @@ const Auth = () => {
 
                     <div className="auth-switch">
                         {isLogin ? (
-                            <p>¿No tenés cuenta? <button type="button" onClick={() => { setIsLogin(false); setError(''); }}>Crear una</button></p>
+                            <>
+                                <p>¿No tenés cuenta? <button type="button" onClick={() => { setIsLogin(false); setError(''); }}>Crear una</button></p>
+                                <p style={{ marginTop: '0.5rem' }}>
+                                    <a href="/forgot-password" style={{ color: 'var(--color-primary)', fontSize: '0.85rem', textDecoration: 'none' }}>
+                                        ¿Olvidaste tu contraseña?
+                                    </a>
+                                </p>
+                            </>
                         ) : (
                             <p>¿Ya tenés cuenta? <button type="button" onClick={() => { setIsLogin(true); setError(''); }}>Iniciar sesión</button></p>
                         )}

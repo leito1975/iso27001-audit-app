@@ -1,14 +1,17 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { sendPasswordResetEmail, sendInviteEmail } from '../utils/email.js';
+import { loginLimiter, registerLimiter, forgotPasswordLimiter } from '../index.js';
 
 const router = express.Router();
 
 // Register
-router.post('/register', asyncHandler(async (req, res) => {
+router.post('/register', registerLimiter, asyncHandler(async (req, res) => {
     const { email, password, name, role = 'auditor' } = req.body;
 
     if (!email || !password || !name) {
@@ -46,7 +49,7 @@ router.post('/register', asyncHandler(async (req, res) => {
 }));
 
 // Login
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -192,6 +195,97 @@ router.get('/activate/:token', asyncHandler(async (req, res) => {
     }
 
     res.json({ user: { email: user.email, name: user.name, role: user.role } });
+}));
+
+// ─── Forgot Password ─────────────────────────────────────────────────────────
+
+// POST /auth/forgot-password — generates reset token and sends email
+router.post('/forgot-password', forgotPasswordLimiter, asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ error: 'El email es requerido' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    // Always respond the same to avoid user enumeration
+    const successMsg = 'Si el email existe en el sistema, recibirás un link para resetear tu contraseña.';
+
+    if (!user || user.status !== 'active') {
+        return res.json({ message: successMsg });
+    }
+
+    // Generate secure token (64 hex chars)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { resetToken, resetExpiry }
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    const sent = await sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl });
+
+    if (!sent) {
+        // SMTP not configured — in dev, return the URL directly
+        if (process.env.NODE_ENV === 'development') {
+            return res.json({ message: successMsg, devResetUrl: resetUrl });
+        }
+    }
+
+    res.json({ message: successMsg });
+}));
+
+// GET /auth/reset/:token — validates reset token
+router.get('/reset/:token', asyncHandler(async (req, res) => {
+    const { token } = req.params;
+
+    const user = await prisma.user.findFirst({
+        where: { resetToken: token },
+        select: { id: true, email: true, resetExpiry: true }
+    });
+
+    if (!user) {
+        return res.status(404).json({ error: 'Link de reseteo inválido o ya utilizado' });
+    }
+    if (user.resetExpiry && new Date() > user.resetExpiry) {
+        return res.status(410).json({ error: 'El link expiró. Solicitá uno nuevo.' });
+    }
+
+    res.json({ valid: true, email: user.email });
+}));
+
+// POST /auth/reset-password — sets new password using reset token
+router.post('/reset-password', asyncHandler(async (req, res) => {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+        return res.status(400).json({ error: 'Token y contraseña son requeridos' });
+    }
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
+
+    const user = await prisma.user.findFirst({ where: { resetToken: token } });
+
+    if (!user) {
+        return res.status(404).json({ error: 'Link de reseteo inválido o ya utilizado' });
+    }
+    if (user.resetExpiry && new Date() > user.resetExpiry) {
+        return res.status(410).json({ error: 'El link expiró. Solicitá uno nuevo.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, resetToken: null, resetExpiry: null }
+    });
+
+    res.json({ message: 'Contraseña actualizada exitosamente. Ya podés iniciar sesión.' });
 }));
 
 export default router;

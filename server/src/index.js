@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 // Load environment variables
@@ -22,7 +23,40 @@ import usersRoutes from './routes/users.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// ─── Rate Limiters ────────────────────────────────────────────────────────────
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,   // 15 min
+    max: 10,
+    message: { error: 'Demasiados intentos de login. Intentá de nuevo en 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,   // 1 hour
+    max: 5,
+    message: { error: 'Demasiados intentos de registro. Intentá de nuevo en 1 hora.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const forgotPasswordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,   // 1 hour
+    max: 5,
+    message: { error: 'Demasiadas solicitudes de reseteo. Intentá de nuevo en 1 hora.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: { error: 'Demasiadas solicitudes. Intentá de nuevo en 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
     origin: process.env.FRONTEND_URL
         ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
@@ -31,6 +65,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/api', apiLimiter);
 
 // Request logging in development
 if (process.env.NODE_ENV === 'development') {
@@ -39,6 +74,9 @@ if (process.env.NODE_ENV === 'development') {
         next();
     });
 }
+
+// Export limiters for use in routes
+export { loginLimiter, registerLimiter, forgotPasswordLimiter };
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -61,22 +99,30 @@ app.use(notFound);
 app.use(errorHandler);
 
 // Auto-create admin user on first run if no users exist
+// Credentials come from env: ADMIN_EMAIL, ADMIN_PASSWORD (required on first deploy)
 async function ensureAdminUser() {
     const prisma = new PrismaClient();
     try {
         const userCount = await prisma.user.count();
         if (userCount === 0) {
-            const hash = await bcrypt.hash('admin123', 10);
+            const adminEmail    = process.env.ADMIN_EMAIL    || 'admin@auditia.com';
+            const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
+            const adminName     = process.env.ADMIN_NAME     || 'Administrador';
+
+            const hash = await bcrypt.hash(adminPassword, 12);
             await prisma.user.create({
                 data: {
-                    email: 'admin@auditia.com',
+                    email: adminEmail,
                     passwordHash: hash,
-                    name: 'Administrador',
+                    name: adminName,
                     role: 'admin',
                     status: 'active'
                 }
             });
-            console.log('✅ Admin user created: admin@auditia.com / admin123');
+            console.log(`✅ Admin user created: ${adminEmail}`);
+            if (!process.env.ADMIN_PASSWORD) {
+                console.warn('⚠️  No ADMIN_PASSWORD env var set — using default. Change this immediately!');
+            }
         }
     } catch (e) {
         console.error('Auto-setup error:', e.message);

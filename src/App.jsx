@@ -16,6 +16,8 @@ import Settings from './pages/Settings/Settings';
 import Requirements from './pages/Requirements/Requirements';
 import Users from './pages/Users/Users';
 import Activate from './pages/Activate/Activate';
+import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
+import ResetPassword from './pages/ResetPassword/ResetPassword';
 
 function App() {
     const { isAuthenticated, loading } = useAuth();
@@ -37,10 +39,10 @@ function App() {
     }
 
     if (!isAuthenticated) {
-        // Allow /activate without login
-        if (window.location.pathname === '/activate') {
-            return <Activate />;
-        }
+        const path = window.location.pathname;
+        if (path === '/activate') return <Activate />;
+        if (path === '/forgot-password') return <ForgotPassword />;
+        if (path.startsWith('/reset-password/')) return <ResetPassword />;
         return <Auth />;
     }
 

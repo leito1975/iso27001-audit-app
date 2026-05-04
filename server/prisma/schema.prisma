@@ -37,6 +37,8 @@ model User {
   status          String              @default("active")
   inviteToken     String?             @map("invite_token")
   inviteExpiry    DateTime?           @map("invite_expiry")
+  resetToken      String?             @map("reset_token")
+  resetExpiry     DateTime?           @map("reset_expiry")
   createdAt       DateTime            @default(now()) @map("created_at")
   assessments     ControlAssessment[]
   findings        Finding[]

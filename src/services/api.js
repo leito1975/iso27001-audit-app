@@ -62,6 +62,15 @@ class ApiService {
         updatePassword: (data) => this.fetch('/auth/password', {
             method: 'PUT',
             body: JSON.stringify(data)
+        }),
+        forgotPassword: (email) => this.fetch('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        }),
+        validateResetToken: (token) => this.fetch(`/auth/reset/${token}`),
+        resetPassword: (token, password) => this.fetch('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ token, password })
         })
     };
 
