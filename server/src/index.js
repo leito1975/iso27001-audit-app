@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import rateLimit from 'express-rate-limit';
+import { apiLimiter } from './middleware/rateLimiter.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 // Load environment variables
@@ -22,39 +22,6 @@ import usersRoutes from './routes/users.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-// ─── Rate Limiters ────────────────────────────────────────────────────────────
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,   // 15 min
-    max: 10,
-    message: { error: 'Demasiados intentos de login. Intentá de nuevo en 15 minutos.' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-
-const registerLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,   // 1 hour
-    max: 5,
-    message: { error: 'Demasiados intentos de registro. Intentá de nuevo en 1 hora.' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-
-const forgotPasswordLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,   // 1 hour
-    max: 5,
-    message: { error: 'Demasiadas solicitudes de reseteo. Intentá de nuevo en 1 hora.' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-
-const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    message: { error: 'Demasiadas solicitudes. Intentá de nuevo en 15 minutos.' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
@@ -75,8 +42,6 @@ if (process.env.NODE_ENV === 'development') {
     });
 }
 
-// Export limiters for use in routes
-export { loginLimiter, registerLimiter, forgotPasswordLimiter };
 
 // Health check
 app.get('/api/health', (req, res) => {

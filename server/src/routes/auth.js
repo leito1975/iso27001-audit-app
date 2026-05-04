@@ -5,8 +5,8 @@ import crypto from 'crypto';
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { sendPasswordResetEmail, sendInviteEmail } from '../utils/email.js';
-import { loginLimiter, registerLimiter, forgotPasswordLimiter } from '../index.js';
+import { sendPasswordResetEmail } from '../utils/email.js';
+import { loginLimiter, registerLimiter, forgotPasswordLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
