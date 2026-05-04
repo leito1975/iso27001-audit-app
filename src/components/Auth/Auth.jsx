@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
 
@@ -110,9 +111,9 @@ const Auth = () => {
                             <>
                                 <p>¿No tenés cuenta? <button type="button" onClick={() => { setIsLogin(false); setError(''); }}>Crear una</button></p>
                                 <p style={{ marginTop: '0.5rem' }}>
-                                    <a href="/forgot-password" style={{ color: 'var(--color-primary)', fontSize: '0.85rem', textDecoration: 'none' }}>
+                                    <Link to="/forgot-password" style={{ color: 'var(--color-primary)', fontSize: '0.85rem', textDecoration: 'none' }}>
                                         ¿Olvidaste tu contraseña?
-                                    </a>
+                                    </Link>
                                 </p>
                             </>
                         ) : (

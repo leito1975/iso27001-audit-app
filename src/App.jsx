@@ -39,11 +39,14 @@ function App() {
     }
 
     if (!isAuthenticated) {
-        const path = window.location.pathname;
-        if (path === '/activate') return <Activate />;
-        if (path === '/forgot-password') return <ForgotPassword />;
-        if (path.startsWith('/reset-password/')) return <ResetPassword />;
-        return <Auth />;
+        return (
+            <Routes>
+                <Route path="/activate" element={<Activate />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
+                <Route path="*" element={<Auth />} />
+            </Routes>
+        );
     }
 
     // If no audit is selected, show the audits management page
