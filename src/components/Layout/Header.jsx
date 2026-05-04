@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, User, FileDown, Command } from 'lucide-react';
+import { Search, User, FileDown, Command, LogOut } from 'lucide-react';
 import { useAudit } from '../../context/AuditContext';
+import { useAuth } from '../../context/AuthContext';
 import NotificationCenter from '../Notifications/NotificationCenter';
 import { generateAuditReport } from '../Reports/PDFGenerator';
 import GlobalSearch from '../Search/GlobalSearch';
@@ -10,6 +11,7 @@ import './Header.css';
 const Header = () => {
     const location = useLocation();
     const { auditInfo, getStatistics, findings, risks, actionPlans, controlAssessments, selectedNorm, currentAudit } = useAudit();
+    const { user, logout } = useAuth();
     const stats = getStatistics();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -97,9 +99,17 @@ const Header = () => {
                             <User />
                         </div>
                         <div className="user-info">
-                            <span className="user-name">{auditInfo.auditor || 'Auditor'}</span>
+                            <span className="user-name">{user?.name || auditInfo.auditor || 'Auditor'}</span>
                             <span className="user-role">Lead Auditor</span>
                         </div>
+                        <button
+                            className="header-btn logout-btn"
+                            onClick={logout}
+                            title="Cerrar sesión"
+                            style={{ marginLeft: '8px' }}
+                        >
+                            <LogOut size={16} />
+                        </button>
                     </div>
                 </div>
             </header>

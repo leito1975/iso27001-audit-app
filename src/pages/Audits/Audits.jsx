@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Edit2, Calendar, Building2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Calendar, Building2, LogOut } from 'lucide-react';
 import { useAudit } from '../../context/AuditContext';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import './Audits.css';
 
 const Audits = () => {
     const navigate = useNavigate();
     const { selectAudit } = useAudit();
+    const { user, logout } = useAuth();
     const [audits, setAudits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -113,10 +115,33 @@ const Audits = () => {
                     <h1 className="audits-title">AuditIA</h1>
                     <p className="audits-subtitle">Gestión de Auditorías Independientes</p>
                 </div>
-                <button className="btn-primary" onClick={() => setShowModal(true)}>
-                    <Plus size={18} />
-                    Nueva Auditoría
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {user && (
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                            {user.name}
+                        </span>
+                    )}
+                    <button className="btn-primary" onClick={() => setShowModal(true)}>
+                        <Plus size={18} />
+                        Nueva Auditoría
+                    </button>
+                    <button
+                        onClick={logout}
+                        title="Cerrar sesión"
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'var(--color-text-secondary)', borderRadius: '8px',
+                            padding: '8px 14px', cursor: 'pointer', fontSize: '0.85rem',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+                    >
+                        <LogOut size={15} />
+                        Salir
+                    </button>
+                </div>
             </div>
 
             {loading ? (
