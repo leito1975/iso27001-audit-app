@@ -11,7 +11,10 @@ function getTransporter() {
         host: EMAIL_HOST,
         port: parseInt(process.env.EMAIL_PORT || '587'),
         secure: process.env.EMAIL_PORT === '465',
-        auth: { user: EMAIL_USER, pass: EMAIL_PASS }
+        auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+        connectionTimeout: 8000,   // 8 seconds max to connect
+        greetingTimeout: 8000,
+        socketTimeout: 10000
     });
 }
 

@@ -227,16 +227,20 @@ router.post('/forgot-password', forgotPasswordLimiter, asyncHandler(async (req, 
     const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-    const sent = await sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl });
-
-    if (!sent) {
-        // SMTP not configured — in dev, return the URL directly
-        if (process.env.NODE_ENV === 'development') {
-            return res.json({ message: successMsg, devResetUrl: resetUrl });
-        }
-    }
-
+    // Respond immediately — don't block on email sending
     res.json({ message: successMsg });
+
+    // Send email in background (non-blocking)
+    sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl })
+        .then(sent => {
+            if (!sent) {
+                console.log(`[ForgotPassword] SMTP not configured. Reset URL for ${user.email}: ${resetUrl}`);
+            }
+        })
+        .catch(err => {
+            console.error(`[ForgotPassword] Email send failed for ${user.email}:`, err.message);
+            console.log(`[ForgotPassword] Reset URL (fallback): ${resetUrl}`);
+        });
 }));
 
 // GET /auth/reset/:token — validates reset token
