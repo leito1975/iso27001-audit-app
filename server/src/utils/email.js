@@ -103,4 +103,42 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
     return true;
 }
 
+/**
+ * Sends an email verification email after self-registration.
+ * Returns true if sent, false if not configured.
+ */
+export async function sendVerificationEmail({ to, name, verifyUrl }) {
+    const resend = getResend();
+    if (!resend) return false;
+
+    const from = process.env.EMAIL_FROM || 'AuditIA <onboarding@resend.dev>';
+
+    await resend.emails.send({
+        from,
+        to,
+        subject: `Confirmá tu cuenta en ${APP_NAME}`,
+        html: baseTemplate(`
+            <p style="margin-top: 0;">Hola <strong>${name}</strong>,</p>
+            <p>Gracias por registrarte en <strong>${APP_NAME}</strong>. Para activar tu cuenta hacé clic en el botón de abajo.</p>
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="${verifyUrl}"
+                   style="display: inline-block; background: ${APP_COLOR}; color: #fff;
+                          text-decoration: none; padding: 14px 32px; border-radius: 8px;
+                          font-weight: 600; font-size: 1rem;">
+                    Confirmar mi cuenta
+                </a>
+            </div>
+            <p style="font-size: 0.85rem; color: #94a3b8;">
+                Este link expira en <strong>24 horas</strong>. Si no creaste esta cuenta podés ignorar este mensaje.
+            </p>
+            <p style="font-size: 0.8rem; color: #64748b; border-top: 1px solid rgba(255,255,255,0.06);
+                       padding-top: 16px; margin-bottom: 0;">
+                Link directo: <a href="${verifyUrl}" style="color: ${APP_COLOR};">${verifyUrl}</a>
+            </p>
+        `)
+    });
+
+    return true;
+}
+
 export const emailConfigured = () => !!process.env.RESEND_API_KEY;

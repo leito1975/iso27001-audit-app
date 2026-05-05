@@ -18,6 +18,7 @@ import Users from './pages/Users/Users';
 import Activate from './pages/Activate/Activate';
 import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
 import ResetPassword from './pages/ResetPassword/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail/VerifyEmail';
 
 function App() {
     const { isAuthenticated, loading } = useAuth();
@@ -44,6 +45,7 @@ function App() {
                 <Route path="/activate" element={<Activate />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
+                <Route path="/verify-email/:token" element={<VerifyEmail />} />
                 <Route path="*" element={<Auth />} />
             </Routes>
         );

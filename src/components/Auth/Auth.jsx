@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import './Auth.css';
 
 const Auth = () => {
-    const { login, register } = useAuth();
+    const { login } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [registered, setRegistered] = useState(false); // show "check your email" screen
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -26,7 +28,11 @@ const Auth = () => {
                     setLoading(false);
                     return;
                 }
-                await register(email, password, name);
+                const data = await api.auth.register({ email, password, name });
+                if (data.requiresVerification) {
+                    setRegistered(true);
+                    return;
+                }
             }
         } catch (err) {
             setError(err.message);
@@ -34,6 +40,42 @@ const Auth = () => {
             setLoading(false);
         }
     };
+
+    // ── Post-registration: check your email ──
+    if (registered) {
+        return (
+            <div className="auth-page">
+                <div className="auth-container">
+                    <div className="auth-header">
+                        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📬</div>
+                        <h1>Revisá tu email</h1>
+                        <p>Enviamos un link de confirmación a <strong>{email}</strong></p>
+                    </div>
+                    <div style={{ padding: '0 1.5rem 1.5rem', textAlign: 'center' }}>
+                        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+                            Hacé clic en el botón del email para activar tu cuenta. Revisá la carpeta de spam si no lo encontrás.
+                        </p>
+                        <button
+                            className="auth-button"
+                            style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}
+                            onClick={async () => {
+                                await api.auth.resendVerification(email).catch(() => {});
+                                setError('');
+                                alert('Email reenviado. Revisá tu bandeja.');
+                            }}
+                        >
+                            Reenviar email de verificación
+                        </button>
+                        <p style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
+                            <button type="button" className="auth-link-btn" onClick={() => { setRegistered(false); setIsLogin(true); }}>
+                                Volver al login
+                            </button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="auth-page">
@@ -52,8 +94,8 @@ const Auth = () => {
                             </defs>
                         </svg>
                     </div>
-                    <h1>ISO 27001 Audit Pro</h1>
-                    <p>Sistema de Gestión de Seguridad de la Información</p>
+                    <h1>AuditIA</h1>
+                    <p>Audit Intelligence Platform</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>
@@ -95,9 +137,9 @@ const Auth = () => {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
+                            placeholder="Mínimo 8 caracteres"
                             required
-                            minLength={6}
+                            minLength={8}
                             autoComplete={isLogin ? 'current-password' : 'new-password'}
                         />
                     </div>
@@ -120,7 +162,6 @@ const Auth = () => {
                             <p>¿Ya tenés cuenta? <button type="button" onClick={() => { setIsLogin(true); setError(''); }}>Iniciar sesión</button></p>
                         )}
                     </div>
-
                 </form>
             </div>
         </div>

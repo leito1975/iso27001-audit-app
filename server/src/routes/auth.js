@@ -5,47 +5,49 @@ import crypto from 'crypto';
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { sendPasswordResetEmail } from '../utils/email.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/email.js';
 import { loginLimiter, registerLimiter, forgotPasswordLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Register
+// Register — creates account pending email verification
 router.post('/register', registerLimiter, asyncHandler(async (req, res) => {
     const { email, password, name, role = 'auditor' } = req.body;
 
     if (!email || !password || !name) {
         return res.status(400).json({ error: 'Email, contraseña y nombre son requeridos' });
     }
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
 
-    // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
         return res.status(409).json({ error: 'El email ya está registrado' });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
+    const passwordHash = await bcrypt.hash(password, 12);
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Create user
     const user = await prisma.user.create({
-        data: { email, passwordHash, name, role },
-        select: { id: true, email: true, name: true, role: true, createdAt: true }
+        data: { email, passwordHash, name, role, status: 'pending_verification', verifyToken, verifyExpiry }
     });
 
-    // Generate token
-    const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
-
+    // Respond immediately, send email in background
     res.status(201).json({
-        message: 'Usuario creado exitosamente',
-        user: { id: user.id, email: user.email, name: user.name, role: user.role },
-        token
+        message: 'Cuenta creada. Revisá tu email para confirmar tu cuenta.',
+        requiresVerification: true
     });
+
+    const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
+    const verifyUrl = `${frontendUrl}/verify-email/${verifyToken}`;
+
+    sendVerificationEmail({ to: user.email, name: user.name, verifyUrl })
+        .catch(err => {
+            console.error(`[Register] Verification email failed for ${user.email}:`, err.message);
+            console.log(`[Register] Verify URL (fallback): ${verifyUrl}`);
+        });
 }));
 
 // Login
@@ -62,9 +64,15 @@ router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
         return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Block invited (not yet activated) users
-    if (user.status === 'invited' || !user.passwordHash) {
-        return res.status(403).json({ error: 'Tu cuenta no está activada. Revisá tu email para el link de activación.' });
+    // Block unverified / invited users
+    if (!user.passwordHash) {
+        return res.status(403).json({ error: 'Tu cuenta no está activada. Revisá tu email.' });
+    }
+    if (user.status === 'invited') {
+        return res.status(403).json({ error: 'Tu cuenta fue invitada pero no activada. Revisá tu email para el link de activación.' });
+    }
+    if (user.status === 'pending_verification') {
+        return res.status(403).json({ error: 'Verificá tu email antes de iniciar sesión. Revisá tu bandeja de entrada.', requiresVerification: true });
     }
 
     // Verify password
@@ -195,6 +203,63 @@ router.get('/activate/:token', asyncHandler(async (req, res) => {
     }
 
     res.json({ user: { email: user.email, name: user.name, role: user.role } });
+}));
+
+// ─── Email Verification ───────────────────────────────────────────────────────
+
+// GET /auth/verify/:token — click from email, activates account and auto-logs in
+router.get('/verify/:verifyToken', asyncHandler(async (req, res) => {
+    const { verifyToken } = req.params;
+
+    const user = await prisma.user.findFirst({ where: { verifyToken } });
+
+    if (!user) {
+        return res.status(404).json({ error: 'Link de verificación inválido o ya utilizado.' });
+    }
+    if (user.verifyExpiry && new Date() > user.verifyExpiry) {
+        return res.status(410).json({ error: 'El link expiró. Registrate de nuevo o contactá al soporte.' });
+    }
+
+    const activated = await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'active', verifyToken: null, verifyExpiry: null },
+        select: { id: true, email: true, name: true, role: true }
+    });
+
+    // Auto-login after verification
+    const token = jwt.sign(
+        { id: activated.id, email: activated.email, role: activated.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    res.json({ message: '¡Cuenta verificada! Ya podés usar AuditIA.', user: activated, token });
+}));
+
+// POST /auth/resend-verification — resend verification email
+router.post('/resend-verification', asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requerido' });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    const msg = 'Si el email existe y está pendiente de verificación, recibirás un nuevo link.';
+
+    if (!user || user.status !== 'pending_verification') {
+        return res.json({ message: msg });
+    }
+
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({ where: { id: user.id }, data: { verifyToken, verifyExpiry } });
+
+    res.json({ message: msg });
+
+    const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
+    const verifyUrl = `${frontendUrl}/verify-email/${verifyToken}`;
+
+    sendVerificationEmail({ to: user.email, name: user.name, verifyUrl })
+        .catch(err => console.error('[ResendVerification] Email failed:', err.message));
 }));
 
 // ─── Forgot Password ─────────────────────────────────────────────────────────

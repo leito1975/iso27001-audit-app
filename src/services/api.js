@@ -71,6 +71,11 @@ class ApiService {
         resetPassword: (token, password) => this.fetch('/auth/reset-password', {
             method: 'POST',
             body: JSON.stringify({ token, password })
+        }),
+        verifyEmail: (token) => this.fetch(`/auth/verify/${token}`),
+        resendVerification: (email) => this.fetch('/auth/resend-verification', {
+            method: 'POST',
+            body: JSON.stringify({ email })
         })
     };
 

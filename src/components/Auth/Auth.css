@@ -163,3 +163,12 @@
 .auth-demo strong {
     color: rgba(255, 255, 255, 0.6);
 }
+.auth-link-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+    text-decoration: underline;
+}
