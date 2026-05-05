@@ -1,21 +1,12 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const APP_NAME = 'AuditIA';
 const APP_COLOR = '#6366f1';
 
-function getTransporter() {
-    const { EMAIL_HOST, EMAIL_USER, EMAIL_PASS } = process.env;
-    if (!EMAIL_HOST || !EMAIL_USER || !EMAIL_PASS) return null;
-
-    return nodemailer.createTransport({
-        host: EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT || '587'),
-        secure: process.env.EMAIL_PORT === '465',
-        auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-        connectionTimeout: 8000,   // 8 seconds max to connect
-        greetingTimeout: 8000,
-        socketTimeout: 10000
-    });
+function getResend() {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) return null;
+    return new Resend(key);
 }
 
 function baseTemplate(bodyHtml) {
@@ -39,17 +30,17 @@ function baseTemplate(bodyHtml) {
 }
 
 /**
- * Sends an invitation email to a new user.
- * Returns true if sent, false if SMTP not configured.
+ * Sends an invitation email.
+ * Returns true if sent, false if not configured.
  */
 export async function sendInviteEmail({ to, name, inviteUrl }) {
-    const transporter = getTransporter();
-    if (!transporter) return false;
+    const resend = getResend();
+    if (!resend) return false;
 
-    const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+    const from = process.env.EMAIL_FROM || 'AuditIA <onboarding@resend.dev>';
 
-    await transporter.sendMail({
-        from: `"${APP_NAME}" <${from}>`,
+    await resend.emails.send({
+        from,
         to,
         subject: `Invitación a ${APP_NAME}`,
         html: baseTemplate(`
@@ -76,16 +67,16 @@ export async function sendInviteEmail({ to, name, inviteUrl }) {
 
 /**
  * Sends a password reset email.
- * Returns true if sent, false if SMTP not configured.
+ * Returns true if sent, false if not configured.
  */
 export async function sendPasswordResetEmail({ to, name, resetUrl }) {
-    const transporter = getTransporter();
-    if (!transporter) return false;
+    const resend = getResend();
+    if (!resend) return false;
 
-    const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+    const from = process.env.EMAIL_FROM || 'AuditIA <onboarding@resend.dev>';
 
-    await transporter.sendMail({
-        from: `"${APP_NAME}" <${from}>`,
+    await resend.emails.send({
+        from,
         to,
         subject: `Reseteo de contraseña — ${APP_NAME}`,
         html: baseTemplate(`
@@ -100,7 +91,7 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
                 </a>
             </div>
             <p style="font-size: 0.85rem; color: #94a3b8;">
-                Este link expira en <strong>1 hora</strong>. Si no solicitaste este cambio, podés ignorar este mensaje — tu contraseña no será modificada.
+                Este link expira en <strong>1 hora</strong>. Si no solicitaste este cambio podés ignorar este mensaje.
             </p>
             <p style="font-size: 0.8rem; color: #64748b; border-top: 1px solid rgba(255,255,255,0.06);
                        padding-top: 16px; margin-bottom: 0;">
@@ -112,4 +103,4 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
     return true;
 }
 
-export const emailConfigured = () => !!(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
+export const emailConfigured = () => !!process.env.RESEND_API_KEY;

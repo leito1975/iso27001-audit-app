@@ -23,6 +23,9 @@ import usersRoutes from './routes/users.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust Render's reverse proxy (required for rate limiting and IP detection)
+app.set('trust proxy', 1);
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
     origin: process.env.FRONTEND_URL
