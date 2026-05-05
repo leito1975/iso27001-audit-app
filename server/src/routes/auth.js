@@ -34,18 +34,27 @@ router.post('/register', registerLimiter, asyncHandler(async (req, res) => {
         data: { email, passwordHash, name, role, status: 'pending_verification', verifyToken, verifyExpiry }
     });
 
+    const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
+    const verifyUrl = `${frontendUrl}/verify-email/${verifyToken}`;
+
     // Respond immediately, send email in background
     res.status(201).json({
         message: 'Cuenta creada. Revisá tu email para confirmar tu cuenta.',
         requiresVerification: true
     });
 
-    const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
-    const verifyUrl = `${frontendUrl}/verify-email/${verifyToken}`;
+    console.log(`[Register] New user: ${user.email} — sending verification to ${verifyUrl}`);
 
     sendVerificationEmail({ to: user.email, name: user.name, verifyUrl })
+        .then(sent => {
+            if (sent) {
+                console.log(`[Register] Verification email sent OK to ${user.email}`);
+            } else {
+                console.warn(`[Register] Email NOT sent (RESEND_API_KEY missing?). Verify URL: ${verifyUrl}`);
+            }
+        })
         .catch(err => {
-            console.error(`[Register] Verification email failed for ${user.email}:`, err.message);
+            console.error(`[Register] Email error for ${user.email}: ${err.message}`);
             console.log(`[Register] Verify URL (fallback): ${verifyUrl}`);
         });
 }));
@@ -259,7 +268,14 @@ router.post('/resend-verification', asyncHandler(async (req, res) => {
     const verifyUrl = `${frontendUrl}/verify-email/${verifyToken}`;
 
     sendVerificationEmail({ to: user.email, name: user.name, verifyUrl })
-        .catch(err => console.error('[ResendVerification] Email failed:', err.message));
+        .then(sent => {
+            if (!sent) console.warn(`[ResendVerification] Email NOT sent. URL: ${verifyUrl}`);
+            else console.log(`[ResendVerification] Email sent OK to ${user.email}`);
+        })
+        .catch(err => {
+            console.error(`[ResendVerification] Error: ${err.message}`);
+            console.log(`[ResendVerification] URL fallback: ${verifyUrl}`);
+        });
 }));
 
 // ─── Forgot Password ─────────────────────────────────────────────────────────

@@ -35,9 +35,25 @@ const Auth = () => {
                 }
             }
         } catch (err) {
-            setError(err.message);
+            // If pending verification, offer to resend
+            if (err.message?.includes('Verificá tu email')) {
+                setError(err.message + ' ¿No llegó? ');
+                setEmail(email); // keep email for resend
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        try {
+            await api.auth.resendVerification(email);
+            setError('');
+            setRegistered(true);
+        } catch {
+            setError('No se pudo reenviar el email.');
         }
     };
 
@@ -101,7 +117,20 @@ const Auth = () => {
                 <form className="auth-form" onSubmit={handleSubmit}>
                     <h2>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</h2>
 
-                    {error && <div className="auth-error">{error}</div>}
+                    {error && (
+                        <div className="auth-error">
+                            {error}
+                            {error.includes('Verificá tu email') && email && (
+                                <button
+                                    type="button"
+                                    onClick={handleResendVerification}
+                                    style={{ marginLeft: 6, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.85rem' }}
+                                >
+                                    Reenviar email
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {!isLogin && (
                         <div className="auth-field">
