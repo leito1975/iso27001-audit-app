@@ -202,6 +202,7 @@ class ApiService {
             body: JSON.stringify(data)
         }),
         resendInvite: (id) => this.fetch(`/users/${id}/resend-invite`, { method: 'POST' }),
+        activate: (id) => this.fetch(`/users/${id}/activate`, { method: 'POST' }),
         delete: (id) => this.fetch(`/users/${id}`, { method: 'DELETE' })
     };
 

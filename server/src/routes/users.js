@@ -158,4 +158,20 @@ router.delete('/:id', authenticateToken, requireAdmin, asyncHandler(async (req, 
     }
 }));
 
+// POST /users/:id/activate — force-activate a pending user (admin only)
+router.post('/:id/activate', authenticateToken, requireAdmin, asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUnique({ where: { id: parseInt(req.params.id) } });
+
+    if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'active', verifyToken: null, verifyExpiry: null }
+    });
+
+    res.json({ message: `Usuario ${user.email} activado correctamente` });
+}));
+
 export default router;

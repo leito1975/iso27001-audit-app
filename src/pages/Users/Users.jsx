@@ -202,9 +202,10 @@ const Users = () => {
                                         </span>
                                     </td>
                                     <td>
-                                        {user.status === 'invited'
-                                            ? <span className="status-badge invited">Pendiente</span>
-                                            : <span className="status-badge active">Activo</span>}
+                                        {user.status === 'invited' && <span className="status-badge invited">Invitado</span>}
+                                        {user.status === 'pending_verification' && <span className="status-badge invited" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>Sin verificar</span>}
+                                        {user.status === 'active' && <span className="status-badge active">Activo</span>}
+                                        {!['invited','pending_verification','active'].includes(user.status) && <span className="status-badge">{user.status}</span>}
                                     </td>
                                     <td className="user-date">{new Date(user.createdAt).toLocaleDateString('es-ES')}</td>
                                     <td>
@@ -212,6 +213,18 @@ const Users = () => {
                                             {user.status === 'invited' && (
                                                 <button className="btn btn-ghost btn-icon" onClick={() => handleResendInvite(user)} title="Reenviar invitación">
                                                     <RefreshCw size={15} />
+                                                </button>
+                                            )}
+                                            {user.status === 'pending_verification' && (
+                                                <button className="btn btn-ghost btn-icon" title="Activar cuenta manualmente"
+                                                    style={{ color: '#22c55e' }}
+                                                    onClick={async () => {
+                                                        try {
+                                                            await api.users.activate(user.id);
+                                                            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: 'active' } : u));
+                                                        } catch (err) { alert(err.message); }
+                                                    }}>
+                                                    ✓
                                                 </button>
                                             )}
                                             <button className="btn btn-ghost btn-icon" onClick={() => handleOpenModal(user)} title="Editar">
